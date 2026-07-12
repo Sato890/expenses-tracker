@@ -47,6 +47,14 @@ MVP planning stage.
 
 This project will run locally first using Docker for the database and separate backend and frontend services.
 
+### Local Database
+
+Copy `.env.example` to `.env`, then start PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
 ### Prerequisites
 
 - Python
