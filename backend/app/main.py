@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
+
 @app.get("/health")
-def home():
+def home() -> dict[str, str]:
     return {"status": "ok"}
