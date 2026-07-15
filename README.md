@@ -4,7 +4,7 @@ A personal expense tracking app for individuals, households, and shared groups, 
 
 ## Current Status
 
-MVP planning stage.
+Backend setup in progress.
 
 ## Tech Stack
 
@@ -13,6 +13,7 @@ MVP planning stage.
 - Frontend: React + TypeScript
 - Dev environment: Docker
 - Testing: pytest
+- Linting and formatting: Ruff
 
 ## Project Goals
 
@@ -57,7 +58,8 @@ docker compose up -d
 
 ### Prerequisites
 
-- Python
+- Python 3.14+
+- uv
 - Node.js
 - Docker
 - Git
@@ -68,3 +70,38 @@ docker compose up -d
 - `backend/`: FastAPI app, business logic, database models, and tests
 - `frontend/`: React app and UI code
 - `docker-compose.yml`: local development services
+
+### Backend API
+
+Run backend commands from the `backend/` directory.
+
+Install dependencies:
+
+```bash
+uv sync
+```
+
+Start the development server:
+
+```bash
+uv run fastapi dev app/main.py
+```
+
+The API docs are available at:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Run tests:
+
+```bash
+uv run python -m pytest
+```
+
+Run lint and format checks:
+
+```bash
+uv run ruff check .
+uv run ruff format --check --diff .
+```
