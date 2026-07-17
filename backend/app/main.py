@@ -4,5 +4,5 @@ app = FastAPI()
 
 
 @app.get("/health")
-def home() -> dict[str, str]:
+def health() -> dict[str, str]:
     return {"status": "ok"}
