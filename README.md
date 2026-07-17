@@ -4,7 +4,7 @@ A personal expense tracking app for individuals, households, and shared groups, 
 
 ## Current Status
 
-Backend setup in progress.
+Phase 2 persistence foundation is in progress.
 
 ## Tech Stack
 
@@ -67,8 +67,8 @@ docker compose up -d
 
 ## Folder Structure
 
-- `backend/`: FastAPI app, business logic, database models, and tests
-- `frontend/`: React app and UI code
+- `backend/`: FastAPI application and backend tests
+- `frontend/`: planned React application and UI code
 - `docker-compose.yml`: local development services
 
 ### Backend API
