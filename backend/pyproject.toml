@@ -24,3 +24,6 @@ lint.extend-select = [
     "B",
     "PT",
 ]
+
+[tool.fastapi]
+entrypoint = "backend.main:app"
