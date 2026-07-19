@@ -9,7 +9,7 @@ Phase 2 persistence foundation is in progress.
 ## Tech Stack
 
 - Backend: FastAPI
-- Database: PostgreSQL
+- Development and Test Databases: PostgreSQL
 - Frontend: React + TypeScript
 - Dev environment: Docker
 - Testing: pytest
@@ -46,15 +46,25 @@ Phase 2 persistence foundation is in progress.
 
 ## Getting Started
 
-This project will run locally first using Docker for the database and separate backend and frontend services.
+This project runs locally with Docker providing separate development and test PostgreSQL databases. The backend and frontend run separately.
 
-### Local Database
+### Local Databases
 
-Copy `.env.example` to `.env`, then start PostgreSQL:
+Copy `.env.example` to `.env`. It defines `DATABASE_URL` for development and `TEST_DATABASE_URL` for automated tests.
+
+Start both PostgreSQL services:
 
 ```bash
 docker compose up -d
 ```
+
+Stop and remove the containers:
+
+```bash
+docker compose down
+```
+
+Database data is preserved in separate Docker volumes.
 
 ### Prerequisites
 
