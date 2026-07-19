@@ -3,6 +3,7 @@
 A personal expense tracking app for individuals, households, and shared groups, built to track who paid, how costs are split, and provide expense statistics.
 
 ## Planned Features
+
 ### MVP
 
 - User accounts
@@ -29,11 +30,12 @@ A personal expense tracking app for individuals, households, and shared groups, 
 - Backend: FastAPI
 - Database: PostgreSQL
 - Frontend: React + TypeScript (planned)
-- Dev environment: Docker
+- Local infrastructure: Docker
 - Testing: pytest
 - Linting and formatting: Ruff
 
 ## Getting Started
+
 ### Prerequisites
 
 - Python 3.14+
@@ -42,13 +44,17 @@ A personal expense tracking app for individuals, households, and shared groups, 
 
 ### Local PostgreSQL
 
-Copy `.env.example` to `.env`, then start PostgreSQL:
+Copy `.env.example` to `.env`. It defines `DATABASE_URL` for development and `TEST_DATABASE_URL` for automated tests.
+
+Start both PostgreSQL services:
 
 ```bash
-docker compose up -d
+
+compose up -d
 ```
 
 ## Backend Development
+
 Run backend commands from the `backend/` directory.
 
 Install dependencies:
@@ -63,6 +69,7 @@ Start the development server:
 uv run fastapi dev
 ```
 With the development server running, Swagger UI is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
 Run tests:
 
 ```bash
