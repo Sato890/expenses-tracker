@@ -50,7 +50,7 @@ Start both PostgreSQL services:
 
 ```bash
 
-compose up -d
+docker compose up -d
 ```
 
 ## Backend Development
