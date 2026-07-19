@@ -2,27 +2,7 @@
 
 A personal expense tracking app for individuals, households, and shared groups, built to track who paid, how costs are split, and provide expense statistics.
 
-## Current Status
-
-Phase 2 persistence foundation is in progress.
-
-## Tech Stack
-
-- Backend: FastAPI
-- Database: PostgreSQL
-- Frontend: React + TypeScript
-- Dev environment: Docker
-- Testing: pytest
-- Linting and formatting: Ruff
-
-## Project Goals
-
-- Learn Python backend development with FastAPI
-- Practice OOP and design patterns
-- Build a usable app for tracking shared expenses
-
 ## Planned Features
-
 ### MVP
 
 - User accounts
@@ -44,11 +24,23 @@ Phase 2 persistence foundation is in progress.
 - Bank and wallet integrations
 - Automatic expense detection
 
+## Tech Stack
+
+- Backend: FastAPI
+- Database: PostgreSQL
+- Frontend: React + TypeScript (planned)
+- Dev environment: Docker
+- Testing: pytest
+- Linting and formatting: Ruff
+
 ## Getting Started
+### Prerequisites
 
-This project will run locally first using Docker for the database and separate backend and frontend services.
+- Python 3.14+
+- uv
+- Docker
 
-### Local Database
+### Local PostgreSQL
 
 Copy `.env.example` to `.env`, then start PostgreSQL:
 
@@ -56,23 +48,7 @@ Copy `.env.example` to `.env`, then start PostgreSQL:
 docker compose up -d
 ```
 
-### Prerequisites
-
-- Python 3.14+
-- uv
-- Node.js
-- Docker
-- Git
-
-
-## Folder Structure
-
-- `backend/`: FastAPI application and backend tests
-- `frontend/`: planned React application and UI code
-- `docker-compose.yml`: local development services
-
-### Backend API
-
+## Backend Development
 Run backend commands from the `backend/` directory.
 
 Install dependencies:
@@ -86,13 +62,7 @@ Start the development server:
 ```bash
 uv run fastapi dev
 ```
-
-The API docs are available at:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
+With the development server running, Swagger UI is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 Run tests:
 
 ```bash
