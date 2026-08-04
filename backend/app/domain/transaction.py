@@ -1,15 +1,9 @@
 from dataclasses import dataclass
 from datetime import date
-from enum import StrEnum
 
 from .allocation import Allocation
 from .group import Member
 from .money import Money
-
-
-class TransactionType(StrEnum):
-    EXPENSE = "expense"
-    SETTLEMENT = "settlement"
 
 
 @dataclass(frozen=True)
@@ -18,11 +12,20 @@ class Category:
 
 
 @dataclass(frozen=True)
-class Transaction:
-    transaction_type: TransactionType
+class Expense:
     amount: Money
     payer: Member
     date: date
-    allocations: tuple[Allocation, ...] = ()
-    receiver: Member | None = None
-    category: Category | None = None
+    category: Category
+    allocations: tuple[Allocation, ...]
+
+
+@dataclass(frozen=True)
+class Settlement:
+    amount: Money
+    payer: Member
+    date: date
+    receiver: Member
+
+
+type Transaction = Expense | Settlement
