@@ -50,8 +50,19 @@ def allocate_equally(
 
 
 def validate_exact_allocations(
-    expected_total: Money, allocations: list[Allocation]
+    expected_total: Money,
+    allocations: list[Allocation],
 ) -> None:
+    if expected_total.amount <= 0:
+        raise ValueError("The expense amount must be positive")
+
+    if not allocations:
+        raise ValueError("At least one allocation is required")
+
+    for allocation in allocations:
+        if allocation.share.amount <= 0:
+            raise ValueError("Allocation shares must be positive")
+
     calculation_context = Context(prec=CALCULATION_PRECISION, rounding=ROUND_DOWN)
 
     with localcontext(calculation_context):

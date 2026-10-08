@@ -82,11 +82,33 @@ def test_accepts_sub_cent_exact_allocations() -> None:
     )
 
 
-def test_rejects_invalid_allocations() -> None:
+def test_rejects_allocation_total_that_does_not_match_expense() -> None:
     allocation_a = Allocation(Member("A", "A"), Money(Decimal("3.0005"), "EUR"))
     allocation_b = Allocation(Member("B", "B"), Money(Decimal("3"), "EUR"))
 
     with pytest.raises(ValueError, match="The allocations must add up to the total"):
         validate_exact_allocations(
             Money(Decimal("6"), "EUR"), [allocation_a, allocation_b]
+        )
+
+
+def test_requires_positive_expense_amount() -> None:
+    allocation = Allocation(Member("A", "A"), Money(Decimal("1"), "EUR"))
+
+    with pytest.raises(ValueError, match="The expense amount must be positive"):
+        validate_exact_allocations(Money(Decimal("0"), "EUR"), [allocation])
+
+
+def test_requires_allocations() -> None:
+    with pytest.raises(ValueError, match="At least one allocation is required"):
+        validate_exact_allocations(Money(Decimal("10"), "EUR"), [])
+
+
+def test_requires_positive_allocation_shares() -> None:
+    allocation_a = Allocation(Member("A", "A"), Money(Decimal("0"), "EUR"))
+    allocation_b = Allocation(Member("B", "B"), Money(Decimal("10"), "EUR"))
+
+    with pytest.raises(ValueError, match="Allocation shares must be positive"):
+        validate_exact_allocations(
+            Money(Decimal("10"), "EUR"), [allocation_a, allocation_b]
         )
