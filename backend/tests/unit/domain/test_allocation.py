@@ -1,6 +1,12 @@
 from decimal import Context, Decimal, localcontext
 
-from app.domain.allocation import Allocation, allocate_equally
+import pytest
+
+from app.domain.allocation import (
+    Allocation,
+    allocate_equally,
+    validate_exact_allocations,
+)
 from app.domain.group import Member
 from app.domain.money import Money
 
@@ -65,3 +71,16 @@ def test_ignores_ambient_decimal_context() -> None:
 
     assert allocations[0].amount == Money(Decimal("10.195"), "EUR")
     assert allocations[1].amount == Money(Decimal("10.195"), "EUR")
+
+def test_accepts_exact_allocations() -> None: 
+    allocation_a = Allocation(Member("A", "A"), Money(Decimal("6"), "EUR"))
+    allocation_b = Allocation(Member("B", "B"), Money(Decimal("4"), "EUR"))
+
+    validate_exact_allocations(Money(Decimal("10"), "EUR"), [allocation_a, allocation_b])
+
+def test_rejects_invalid_allocations() -> None: 
+    allocation_a = Allocation(Member("A", "A"), Money(Decimal("3.0005"), "EUR"))
+    allocation_b = Allocation(Member("B", "B"), Money(Decimal("3"), "EUR"))
+
+    with pytest.raises(ZeroDivisionError):
+        validate_exact_allocations(Money(Decimal("6")), [allocation_a, allocation_b])
