@@ -2,38 +2,12 @@
 
 A personal expense tracking app for individuals, households, and shared groups, built to track who paid, how costs are split, and provide expense statistics.
 
-## Planned Features
-
-### MVP
-
-- User accounts
-- Groups and members
-- Manual expense entry
-- Equal and exact splits
-- Settlements and balance tracking
-- Group categories
-- Monthly, yearly, and YTD statistics
-- Filters by person, category, date range, and necessity
-
-### Later
-
-- CSV import from Settle Up
-- Multi-currency support
-- Currency conversion API
-- Android app
-- Offline sync
-- Bank and wallet integrations
-- Automatic expense detection
-
-## Tech Stack
-
+### Stack
 - Backend: FastAPI
 - Database: PostgreSQL
-- Frontend: React + TypeScript (planned)
 - Local infrastructure: Docker
 - Testing: pytest
 - Linting and formatting: Ruff
-
 ## Getting Started
 
 ### Prerequisites
