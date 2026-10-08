@@ -11,7 +11,7 @@ CALCULATION_PRECISION = 37
 @dataclass(frozen=True)
 class Allocation:
     receiver: Member
-    amount: Money
+    share: Money
 
 
 def allocate_equally(
@@ -42,8 +42,33 @@ def allocate_equally(
             allocations.append(
                 Allocation(
                     receiver=member,
-                    amount=Money(allocation_amount, currency),
+                    share=Money(allocation_amount, currency),
                 )
             )
 
     return allocations
+
+
+def validate_exact_allocations(
+    expected_total: Money,
+    allocations: list[Allocation],
+) -> None:
+    if expected_total.amount <= 0:
+        raise ValueError("The expense amount must be positive")
+
+    if not allocations:
+        raise ValueError("At least one allocation is required")
+
+    for allocation in allocations:
+        if allocation.share.amount <= 0:
+            raise ValueError("Allocation shares must be positive")
+
+    calculation_context = Context(prec=CALCULATION_PRECISION, rounding=ROUND_DOWN)
+
+    with localcontext(calculation_context):
+        total = Decimal("0")
+        for allocation in allocations:
+            total += allocation.share.amount
+
+    if total != expected_total.amount:
+        raise ValueError("The allocations must add up to the total")
