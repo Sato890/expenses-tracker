@@ -22,8 +22,8 @@ def test_allocates_divisible_amount_equally() -> None:
     assert len(allocations) == 2
     assert allocations[0].receiver == member_a
     assert allocations[1].receiver == member_b
-    assert allocations[0].amount == Money(Decimal("15.111111111111111111"), "EUR")
-    assert allocations[1].amount == allocations[0].amount
+    assert allocations[0].share == Money(Decimal("15.111111111111111111"), "EUR")
+    assert allocations[1].share == allocations[0].share
 
 
 def test_assigns_residual_to_first_receiver() -> None:
@@ -37,10 +37,10 @@ def test_assigns_residual_to_first_receiver() -> None:
     assert len(allocations) == 2
     assert allocations[0].receiver == member_a
     assert allocations[1].receiver == member_b
-    assert allocations[0].amount == Money(Decimal("15.000000000000000001"), "EUR")
-    assert allocations[1].amount == Money(Decimal("15.000000000000000000"), "EUR")
-    assert allocations[0].amount.currency == amount.currency
-    assert allocations[1].amount.currency == amount.currency
+    assert allocations[0].share == Money(Decimal("15.000000000000000001"), "EUR")
+    assert allocations[1].share == Money(Decimal("15.000000000000000000"), "EUR")
+    assert allocations[0].share.currency == amount.currency
+    assert allocations[1].share.currency == amount.currency
 
 
 def test_assigns_calculation_residual_in_receiver_order() -> None:
@@ -69,18 +69,24 @@ def test_ignores_ambient_decimal_context() -> None:
     with localcontext(context):
         allocations = allocate_equally(amount, [member_a, member_b])
 
-    assert allocations[0].amount == Money(Decimal("10.195"), "EUR")
-    assert allocations[1].amount == Money(Decimal("10.195"), "EUR")
+    assert allocations[0].share == Money(Decimal("10.195"), "EUR")
+    assert allocations[1].share == Money(Decimal("10.195"), "EUR")
 
-def test_accepts_exact_allocations() -> None: 
+
+def test_accepts_exact_allocations() -> None:
     allocation_a = Allocation(Member("A", "A"), Money(Decimal("6"), "EUR"))
     allocation_b = Allocation(Member("B", "B"), Money(Decimal("4"), "EUR"))
 
-    validate_exact_allocations(Money(Decimal("10"), "EUR"), [allocation_a, allocation_b])
+    validate_exact_allocations(
+        Money(Decimal("10"), "EUR"), [allocation_a, allocation_b]
+    )
 
-def test_rejects_invalid_allocations() -> None: 
+
+def test_rejects_invalid_allocations() -> None:
     allocation_a = Allocation(Member("A", "A"), Money(Decimal("3.0005"), "EUR"))
     allocation_b = Allocation(Member("B", "B"), Money(Decimal("3"), "EUR"))
 
-    with pytest.raises(ZeroDivisionError):
-        validate_exact_allocations(Money(Decimal("6")), [allocation_a, allocation_b])
+    with pytest.raises(ValueError, match="The allocations must add up to the total"):
+        validate_exact_allocations(
+            Money(Decimal("6"), "EUR"), [allocation_a, allocation_b]
+        )
