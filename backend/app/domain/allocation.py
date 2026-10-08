@@ -47,3 +47,10 @@ def allocate_equally(
             )
 
     return allocations
+
+
+def validate_exact_allocations(
+    amount: Money,
+    allocations: list[Allocation]
+) -> None:
+    return
