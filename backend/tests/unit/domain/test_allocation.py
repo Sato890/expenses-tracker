@@ -73,12 +73,12 @@ def test_ignores_ambient_decimal_context() -> None:
     assert allocations[1].share == Money(Decimal("10.195"), "EUR")
 
 
-def test_accepts_exact_allocations() -> None:
-    allocation_a = Allocation(Member("A", "A"), Money(Decimal("6"), "EUR"))
-    allocation_b = Allocation(Member("B", "B"), Money(Decimal("4"), "EUR"))
+def test_accepts_sub_cent_exact_allocations() -> None:
+    allocation_a = Allocation(Member("A", "A"), Money(Decimal("6.0025"), "EUR"))
+    allocation_b = Allocation(Member("B", "B"), Money(Decimal("4.0025"), "EUR"))
 
     validate_exact_allocations(
-        Money(Decimal("10"), "EUR"), [allocation_a, allocation_b]
+        Money(Decimal("10.005"), "EUR"), [allocation_a, allocation_b]
     )
 
 
