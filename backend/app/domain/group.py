@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from decimal import Context, Decimal, localcontext
 from typing import TYPE_CHECKING
 
-DEBT_CALCULATION_PRECISION = 37
+from .money import CALCULATION_PRECISION
 
 if TYPE_CHECKING:
     from .debt import Debt
@@ -46,7 +46,7 @@ class Group:
     def calculate_member_settlement_amounts(self) -> dict[Member, Decimal]:
         settlement_amounts = {member: Decimal("0") for member in self.members}
 
-        with localcontext(Context(prec=DEBT_CALCULATION_PRECISION)):
+        with localcontext(Context(prec=CALCULATION_PRECISION)):
             for debt in self.debts:
                 settlement_amounts[debt.debtor] -= debt.amount.amount
                 settlement_amounts[debt.creditor] += debt.amount.amount

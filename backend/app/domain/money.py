@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+CALCULATION_PRECISION = 37
+
 
 @dataclass(frozen=True)
 class Money:

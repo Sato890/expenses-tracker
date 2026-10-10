@@ -2,10 +2,8 @@ from dataclasses import dataclass
 from decimal import Context, localcontext
 
 from .group import Member
-from .money import Money
+from .money import CALCULATION_PRECISION, Money
 from .transaction import Expense
-
-DEBT_CALCULATION_PRECISION = 37
 
 
 @dataclass(frozen=True)
@@ -68,7 +66,7 @@ def calculate_expense_debts(expense: Expense) -> list[Debt]:
 def calculate_debts(expenses: list[Expense]) -> list[Debt]:
     debts_by_members: dict[frozenset[Member], Debt] = {}
 
-    with localcontext(Context(prec=DEBT_CALCULATION_PRECISION)):
+    with localcontext(Context(prec=CALCULATION_PRECISION)):
         for expense in expenses:
             for expense_debt in calculate_expense_debts(expense):
                 member_pair = _get_member_pair(expense_debt)
