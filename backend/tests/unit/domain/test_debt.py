@@ -16,6 +16,7 @@ def test_creates_debts_for_expense_receivers() -> None:
     receiver_c = Member("C", "C")
     expense_amount = Money(Decimal("10"), "EUR")
     expense = Expense(
+        "expense",
         expense_amount,
         payer,
         date.today(),
@@ -35,6 +36,7 @@ def test_skips_debt_for_payer_allocation() -> None:
     payer = Member("A", "A")
     expense_amount = Money(Decimal("10"), "EUR")
     expense = Expense(
+        "expense",
         expense_amount,
         payer,
         date.today(),
@@ -47,10 +49,22 @@ def test_skips_debt_for_payer_allocation() -> None:
     assert debts == []
 
 
-def create_expense(payer: Member, receiver: Member, amount: str) -> Expense:
+def create_expense(
+    payer: Member,
+    receiver: Member,
+    amount: str,
+    expense_id: str = "expense",
+) -> Expense:
     money = Money(Decimal(amount), "EUR")
     allocation = Allocation(receiver, money)
-    return Expense(money, payer, date.today(), Category("Other"), (allocation,))
+    return Expense(
+        expense_id,
+        money,
+        payer,
+        date.today(),
+        Category("Other"),
+        (allocation,),
+    )
 
 
 def test_adds_debts_in_same_direction() -> None:

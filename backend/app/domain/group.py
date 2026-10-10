@@ -29,7 +29,13 @@ class Group:
     name: str
     members: list[Member] = field(default_factory=list)
     member_to_user: dict[Member, User] = field(default_factory=dict)
-    transactions: list[Transaction] = field(default_factory=list)
+    _transactions: list[Transaction] = field(
+        default_factory=list, init=False, repr=False
+    )
+
+    @property
+    def transactions(self) -> tuple[Transaction, ...]:
+        return tuple(self._transactions)
 
     @property
     def debts(self) -> list[Debt]:
@@ -38,7 +44,7 @@ class Group:
 
         expenses = [
             transaction
-            for transaction in self.transactions
+            for transaction in self._transactions
             if isinstance(transaction, Expense)
         ]
         return calculate_debts(expenses)
@@ -54,6 +60,29 @@ class Group:
         return settlement_amounts
 
     def add_expense(self, expense: Expense) -> None:
+        from .transaction import Expense
+
+        self._validate_expense(expense)
+
+        if any(
+            isinstance(transaction, Expense)
+            and transaction.expense_id == expense.expense_id
+            for transaction in self._transactions
+        ):
+            raise ValueError("Expense ID already exists in the group")
+
+        self._transactions.append(expense)
+
+    def remove_expense(self, expense_id: str) -> None:
+        expense_index = self._find_expense_index(expense_id)
+        del self._transactions[expense_index]
+
+    def edit_expense(self, expense: Expense) -> None:
+        self._validate_expense(expense)
+        expense_index = self._find_expense_index(expense.expense_id)
+        self._transactions[expense_index] = expense
+
+    def _validate_expense(self, expense: Expense) -> None:
         from .allocation import validate_exact_allocations
 
         if expense.payer not in self.members:
@@ -65,4 +94,14 @@ class Group:
 
         validate_exact_allocations(expense.amount, list(expense.allocations))
 
-        self.transactions.append(expense)
+    def _find_expense_index(self, expense_id: str) -> int:
+        from .transaction import Expense
+
+        for index, transaction in enumerate(self._transactions):
+            if (
+                isinstance(transaction, Expense)
+                and transaction.expense_id == expense_id
+            ):
+                return index
+
+        raise ValueError("Expense is not in the group")
