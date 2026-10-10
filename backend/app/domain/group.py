@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Context, Decimal, localcontext
 from typing import TYPE_CHECKING
+
+DEBT_CALCULATION_PRECISION = 37
 
 if TYPE_CHECKING:
     from .debt import Debt
@@ -39,3 +42,13 @@ class Group:
             if isinstance(transaction, Expense)
         ]
         return calculate_debts(expenses)
+
+    def calculate_member_settlement_amounts(self) -> dict[Member, Decimal]:
+        settlement_amounts = {member: Decimal("0") for member in self.members}
+
+        with localcontext(Context(prec=DEBT_CALCULATION_PRECISION)):
+            for debt in self.debts:
+                settlement_amounts[debt.debtor] -= debt.amount.amount
+                settlement_amounts[debt.creditor] += debt.amount.amount
+
+        return settlement_amounts

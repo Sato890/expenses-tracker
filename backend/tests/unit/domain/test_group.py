@@ -25,3 +25,30 @@ def test_derives_debts_from_current_transactions() -> None:
     group.transactions.append(create_expense(member_b, member_a, "4"))
 
     assert group.debts == [Debt(Money(Decimal("1"), "EUR"), member_b, member_a)]
+
+
+def test_calculates_settlement_amounts_for_every_member() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    member_c = Member("C", "C")
+    member_d = Member("D", "D")
+
+    group = Group(
+        "group",
+        "Group",
+        members=[member_a, member_b, member_c, member_d],
+        transactions=[
+            create_expense(member_a, member_b, "3.0005"),
+            create_expense(member_c, member_a, "2.0005"),
+        ],
+    )
+
+    settlement_amounts = group.calculate_member_settlement_amounts()
+
+    assert settlement_amounts == {
+        member_a: Decimal("1.0000"),
+        member_b: Decimal("-3.0005"),
+        member_c: Decimal("2.0005"),
+        member_d: Decimal("0"),
+    }
+    assert sum(settlement_amounts.values()) == Decimal("0")
