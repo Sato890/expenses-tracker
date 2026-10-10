@@ -2,10 +2,9 @@ from dataclasses import dataclass
 from decimal import ROUND_DOWN, Context, Decimal, localcontext
 
 from .group import Member
-from .money import Money
+from .money import CALCULATION_PRECISION, Money
 
 ALLOCATION_UNIT = Decimal("1e-18")
-CALCULATION_PRECISION = 37
 
 
 @dataclass(frozen=True)

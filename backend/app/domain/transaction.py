@@ -13,6 +13,7 @@ class Category:
 
 @dataclass(frozen=True)
 class Expense:
+    expense_id: str
     amount: Money
     payer: Member
     date: date
