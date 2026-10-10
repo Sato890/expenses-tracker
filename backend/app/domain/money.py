@@ -11,10 +11,16 @@ class Money:
         if not isinstance(other, Money):
             raise NotImplementedError
 
-        if self.currency != other.currency:
-            raise ValueError("Cannot add money with different currencies")
-
         return Money(
             amount=self.amount + other.amount,
+            currency=self.currency,
+        )
+
+    def __sub__(self, other: Money) -> Money:
+        if not isinstance(other, Money):
+            raise NotImplementedError
+
+        return Money(
+            amount=self.amount - other.amount,
             currency=self.currency,
         )
