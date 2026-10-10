@@ -8,7 +8,7 @@ from .money import CALCULATION_PRECISION
 
 if TYPE_CHECKING:
     from .debt import Debt
-    from .transaction import Transaction
+    from .transaction import Expense, Transaction
 
 
 @dataclass(frozen=True)
@@ -52,3 +52,17 @@ class Group:
                 settlement_amounts[debt.creditor] += debt.amount.amount
 
         return settlement_amounts
+
+    def add_expense(self, expense: Expense) -> None:
+        from .allocation import validate_exact_allocations
+
+        if expense.payer not in self.members:
+            raise ValueError("Payer is not in the group")
+
+        for allocation in expense.allocations:
+            if allocation.receiver not in self.members:
+                raise ValueError("Receiver is not in the group")
+
+        validate_exact_allocations(expense.amount, list(expense.allocations))
+
+        self.transactions.append(expense)

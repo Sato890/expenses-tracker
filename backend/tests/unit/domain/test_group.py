@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from app.domain.allocation import Allocation
 from app.domain.debt import Debt
 from app.domain.group import Group, Member
@@ -52,3 +54,54 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
         member_d: Decimal("0"),
     }
     assert sum(settlement_amounts.values()) == Decimal("0")
+
+
+def test_adds_valid_expense() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", members=[payer, receiver])
+    expense = create_expense(payer, receiver, "5")
+
+    group.add_expense(expense)
+
+    assert group.transactions == [expense]
+
+
+def test_rejects_expense_from_non_member_payer() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", members=[receiver])
+
+    with pytest.raises(ValueError, match="Payer is not in the group"):
+        group.add_expense(create_expense(payer, receiver, "5"))
+
+    assert group.transactions == []
+
+
+def test_rejects_expense_for_non_member_receiver() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", members=[payer])
+
+    with pytest.raises(ValueError, match="Receiver is not in the group"):
+        group.add_expense(create_expense(payer, receiver, "5"))
+
+    assert group.transactions == []
+
+
+def test_rejects_expense_with_invalid_allocations() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", members=[payer, receiver])
+    expense = Expense(
+        Money(Decimal("5"), "EUR"),
+        payer,
+        date.today(),
+        Category("Other"),
+        (Allocation(receiver, Money(Decimal("4"), "EUR")),),
+    )
+
+    with pytest.raises(ValueError, match="allocations must add up"):
+        group.add_expense(expense)
+
+    assert group.transactions == []
