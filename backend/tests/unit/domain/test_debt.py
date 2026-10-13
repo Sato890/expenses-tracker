@@ -4,10 +4,15 @@ from decimal import Decimal
 import pytest
 
 from app.domain.allocation import Allocation, allocate_equally
-from app.domain.debt import Debt, calculate_debts, calculate_expense_debts
+from app.domain.debt import (
+    Debt,
+    calculate_debts,
+    calculate_expense_debts,
+    calculate_settlement_debts,
+)
 from app.domain.group import Member
 from app.domain.money import Money
-from app.domain.transaction import Category, Expense
+from app.domain.transaction import Category, Expense, Settlement
 
 
 def test_creates_debts_for_expense_receivers() -> None:
@@ -136,3 +141,34 @@ def test_reverses_debt_with_larger_opposite_expense() -> None:
     debts = calculate_debts(expenses)
 
     assert debts == [Debt(Money(Decimal("2"), "EUR"), member_a, member_b)]
+
+
+def test_settlement_creates_debt_from_receiver_to_payer() -> None:
+    payer = Member("B", "B")
+    receiver = Member("A", "A")
+    amount = Money(Decimal("4.0025"), "EUR")
+    settlement = Settlement("payment", amount, payer, date.today(), receiver)
+
+    assert calculate_settlement_debts(settlement) == [Debt(amount, receiver, payer)]
+
+
+def test_payment_to_self_creates_no_debt() -> None:
+    member = Member("A", "A")
+    settlement = Settlement(
+        "payment", Money(Decimal("4"), "EUR"), member, date.today(), member
+    )
+
+    assert calculate_debts([settlement]) == []
+
+
+def test_debts_do_not_depend_on_settlement_position() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    expense = create_expense(member_a, member_b, "10")
+    settlement = Settlement(
+        "payment", Money(Decimal("4"), "EUR"), member_b, date.today(), member_a
+    )
+
+    assert calculate_debts([settlement, expense]) == calculate_debts(
+        [expense, settlement]
+    )

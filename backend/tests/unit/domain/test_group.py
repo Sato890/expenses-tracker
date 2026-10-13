@@ -28,6 +28,17 @@ def create_expense(
     )
 
 
+def create_settlement(
+    payer: Member,
+    receiver: Member,
+    amount: str,
+    settlement_id: str = "settlement",
+) -> Settlement:
+    return Settlement(
+        settlement_id, Money(Decimal(amount), "EUR"), payer, date.today(), receiver
+    )
+
+
 def test_derives_debts_from_current_transactions() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")
@@ -222,9 +233,7 @@ def test_reduces_debt_after_partial_settlement() -> None:
     group = Group("group", "Group", _members=[member_a, member_b])
     group.add_expense(create_expense(member_a, member_b, "10"))
 
-    group.add_settlement(
-        Settlement(Money(Decimal("4"), "EUR"), member_b, date.today(), member_a)
-    )
+    group.add_settlement(create_settlement(member_b, member_a, "4"))
 
     assert group.calculate_member_settlement_amounts() == {
         member_a: Decimal("6"),
@@ -238,9 +247,7 @@ def test_clears_debt_after_full_settlement() -> None:
     group = Group("group", "Group", _members=[member_a, member_b])
     group.add_expense(create_expense(member_a, member_b, "10"))
 
-    group.add_settlement(
-        Settlement(Money(Decimal("10"), "EUR"), member_b, date.today(), member_a)
-    )
+    group.add_settlement(create_settlement(member_b, member_a, "10"))
 
     assert group.debts == []
     assert group.calculate_member_settlement_amounts() == {
@@ -255,11 +262,179 @@ def test_reverses_debt_after_excess_settlement() -> None:
     group = Group("group", "Group", _members=[member_a, member_b])
     group.add_expense(create_expense(member_a, member_b, "10"))
 
-    group.add_settlement(
-        Settlement(Money(Decimal("12"), "EUR"), member_b, date.today(), member_a)
-    )
+    group.add_settlement(create_settlement(member_b, member_a, "12"))
 
     assert group.calculate_member_settlement_amounts() == {
         member_a: Decimal("-2"),
         member_b: Decimal("2"),
     }
+
+
+def test_adds_valid_settlement() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    settlement = create_settlement(payer, receiver, "5")
+
+    group.add_settlement(settlement)
+
+    assert group.transactions == (settlement,)
+    assert group.debts == [Debt(Money(Decimal("5"), "EUR"), receiver, payer)]
+
+
+@pytest.mark.parametrize("missing_role", ["payer", "receiver"])
+def test_rejects_settlement_with_non_member(missing_role: str) -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    members = [receiver] if missing_role == "payer" else [payer]
+    group = Group("group", "Group", _members=members)
+
+    with pytest.raises(
+        ValueError, match=f"{missing_role.capitalize()} is not in the group"
+    ):
+        group.add_settlement(create_settlement(payer, receiver, "5"))
+
+    assert group.transactions == ()
+
+
+@pytest.mark.parametrize("amount", ["0", "-1"])
+def test_rejects_nonpositive_settlement(amount: str) -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+
+    with pytest.raises(ValueError, match="amount must be positive"):
+        group.add_settlement(create_settlement(payer, receiver, amount))
+
+    assert group.transactions == ()
+
+
+def test_rejects_duplicate_settlement_id() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    original = create_settlement(payer, receiver, "5")
+    group.add_settlement(original)
+
+    with pytest.raises(ValueError, match="Settlement ID already exists"):
+        group.add_settlement(create_settlement(payer, receiver, "4"))
+
+    assert group.transactions == (original,)
+
+
+def test_removes_settlement_by_id() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    expense = create_expense(member_a, member_b, "10", "shared-id")
+    payment = create_settlement(member_b, member_a, "4", "shared-id")
+    other_payment = create_settlement(member_b, member_a, "1", "other")
+    group.add_expense(expense)
+    group.add_settlement(payment)
+    group.add_settlement(other_payment)
+
+    group.remove_settlement("shared-id")
+
+    assert group.transactions == (expense, other_payment)
+    assert group.debts == [Debt(Money(Decimal("9"), "EUR"), member_b, member_a)]
+    assert group.calculate_member_settlement_amounts() == {
+        member_a: Decimal("9"),
+        member_b: Decimal("-9"),
+    }
+
+
+def test_edits_settlement_by_id() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    expense = create_expense(member_a, member_b, "10", "shared-id")
+    original = create_settlement(member_b, member_a, "4", "shared-id")
+    replacement = create_settlement(member_b, member_a, "7", "shared-id")
+    group.add_expense(expense)
+    group.add_settlement(original)
+
+    group.edit_settlement(replacement)
+
+    assert group.transactions == (expense, replacement)
+    assert group.debts == [Debt(Money(Decimal("3"), "EUR"), member_b, member_a)]
+    assert group.calculate_member_settlement_amounts() == {
+        member_a: Decimal("3"),
+        member_b: Decimal("-3"),
+    }
+
+
+@pytest.mark.parametrize("invalid_field", ["amount", "payer", "receiver"])
+def test_rejects_invalid_settlement_edit_without_changing_transactions(
+    invalid_field: str,
+) -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    outsider = Member("C", "C")
+    group = Group("group", "Group", _members=[payer, receiver])
+    original = create_settlement(payer, receiver, "5")
+    group.add_settlement(original)
+    replacement = create_settlement(
+        outsider if invalid_field == "payer" else payer,
+        outsider if invalid_field == "receiver" else receiver,
+        "0" if invalid_field == "amount" else "4",
+    )
+
+    with pytest.raises(ValueError, match="positive|not in the group"):
+        group.edit_settlement(replacement)
+
+    assert group.transactions == (original,)
+
+
+@pytest.mark.parametrize("operation", ["edit", "remove"])
+def test_rejects_changing_missing_settlement(operation: str) -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    expense = create_expense(payer, receiver, "5", "missing")
+    group.add_expense(expense)
+
+    if operation == "edit":
+        replacement = create_settlement(payer, receiver, "4", "missing")
+        with pytest.raises(ValueError, match="Settlement is not in the group"):
+            group.edit_settlement(replacement)
+    else:
+        with pytest.raises(ValueError, match="Settlement is not in the group"):
+            group.remove_settlement("missing")
+
+    assert group.transactions == (expense,)
+
+
+@pytest.mark.parametrize("member_id", ["A", "B"])
+def test_rejects_removing_member_with_settlement(member_id: str) -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    group.add_settlement(create_settlement(payer, receiver, "5"))
+
+    with pytest.raises(ValueError, match="associated transactions"):
+        group.remove_member(member_id)
+
+    assert group.members == (payer, receiver)
+
+
+def test_settlement_changes_debts_without_changing_spending() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    expense = create_expense(member_a, member_b, "10.005")
+    group.add_expense(expense)
+    spending_before = sum(allocation.share.amount for allocation in expense.allocations)
+
+    group.add_settlement(create_settlement(member_b, member_a, "4.0025"))
+
+    spending_after = sum(
+        allocation.share.amount
+        for transaction in group.transactions
+        if isinstance(transaction, Expense)
+        for allocation in transaction.allocations
+    )
+    assert spending_after == spending_before == Decimal("10.005")
+    assert group.debts == [Debt(Money(Decimal("6.0025"), "EUR"), member_b, member_a)]
+    amounts = group.calculate_member_settlement_amounts()
+    assert amounts == {member_a: Decimal("6.0025"), member_b: Decimal("-6.0025")}
+    assert sum(amounts.values()) == 0

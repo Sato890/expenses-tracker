@@ -1,9 +1,10 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Context, localcontext
 
 from .identity import Member
 from .money import CALCULATION_PRECISION, Money
-from .transaction import Expense
+from .transaction import Expense, Settlement, Transaction
 
 
 @dataclass(frozen=True)
@@ -63,20 +64,32 @@ def calculate_expense_debts(expense: Expense) -> list[Debt]:
     return debts
 
 
-def calculate_debts(expenses: list[Expense]) -> list[Debt]:
+def calculate_settlement_debts(settlement: Settlement) -> list[Debt]:
+    if settlement.payer == settlement.receiver:
+        return []
+
+    return [Debt(settlement.amount, settlement.receiver, settlement.payer)]
+
+
+def calculate_debts(transactions: Sequence[Transaction]) -> list[Debt]:
     debts_by_members: dict[frozenset[Member], Debt] = {}
 
     with localcontext(Context(prec=CALCULATION_PRECISION)):
-        for expense in expenses:
-            for expense_debt in calculate_expense_debts(expense):
-                member_pair = _get_member_pair(expense_debt)
+        for transaction in transactions:
+            if isinstance(transaction, Expense):
+                transaction_debts = calculate_expense_debts(transaction)
+            else:
+                transaction_debts = calculate_settlement_debts(transaction)
+
+            for transaction_debt in transaction_debts:
+                member_pair = _get_member_pair(transaction_debt)
                 debt = debts_by_members.get(member_pair)
 
                 if debt is None:
-                    debts_by_members[member_pair] = expense_debt
+                    debts_by_members[member_pair] = transaction_debt
                     continue
 
-                net_debt = _get_net_debts(debt, expense_debt)
+                net_debt = _get_net_debts(debt, transaction_debt)
 
                 if net_debt is None:
                     del debts_by_members[member_pair]
