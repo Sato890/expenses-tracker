@@ -7,7 +7,7 @@ from app.domain.allocation import Allocation
 from app.domain.debt import Debt
 from app.domain.group import Group, Member, User
 from app.domain.money import Money
-from app.domain.transaction import Category, Expense
+from app.domain.transaction import Category, Expense, Settlement
 
 
 def create_expense(
@@ -214,3 +214,52 @@ def test_rejects_removing_member_with_expense() -> None:
         group.remove_member(receiver.id)
 
     assert group.members == (payer, receiver)
+
+
+def test_reduces_debt_after_partial_settlement() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    group.add_expense(create_expense(member_a, member_b, "10"))
+
+    group.add_settlement(
+        Settlement(Money(Decimal("4"), "EUR"), member_b, date.today(), member_a)
+    )
+
+    assert group.calculate_member_settlement_amounts() == {
+        member_a: Decimal("6"),
+        member_b: Decimal("-6"),
+    }
+
+
+def test_clears_debt_after_full_settlement() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    group.add_expense(create_expense(member_a, member_b, "10"))
+
+    group.add_settlement(
+        Settlement(Money(Decimal("10"), "EUR"), member_b, date.today(), member_a)
+    )
+
+    assert group.debts == []
+    assert group.calculate_member_settlement_amounts() == {
+        member_a: Decimal("0"),
+        member_b: Decimal("0"),
+    }
+
+
+def test_reverses_debt_after_excess_settlement() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    group = Group("group", "Group", _members=[member_a, member_b])
+    group.add_expense(create_expense(member_a, member_b, "10"))
+
+    group.add_settlement(
+        Settlement(Money(Decimal("12"), "EUR"), member_b, date.today(), member_a)
+    )
+
+    assert group.calculate_member_settlement_amounts() == {
+        member_a: Decimal("-2"),
+        member_b: Decimal("2"),
+    }
