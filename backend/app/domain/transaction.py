@@ -23,6 +23,7 @@ class Expense:
 
 @dataclass(frozen=True)
 class Settlement:
+    settlement_id: str
     amount: Money
     payer: Member
     date: date

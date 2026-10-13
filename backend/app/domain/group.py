@@ -33,12 +33,7 @@ class Group:
 
     @property
     def debts(self) -> list[Debt]:
-        expenses = [
-            transaction
-            for transaction in self._transactions
-            if isinstance(transaction, Expense)
-        ]
-        return calculate_debts(expenses)
+        return calculate_debts(self._transactions)
 
     def add_member(self, new_member: Member) -> None:
         if any(member.id == new_member.id for member in self._members):
@@ -122,3 +117,42 @@ class Group:
                 return index
 
         raise ValueError("Expense is not in the group")
+
+    def add_settlement(self, settlement: Settlement) -> None:
+        self._validate_settlement(settlement)
+
+        if any(
+            isinstance(transaction, Settlement)
+            and transaction.settlement_id == settlement.settlement_id
+            for transaction in self._transactions
+        ):
+            raise ValueError("Settlement ID already exists in the group")
+
+        self._transactions.append(settlement)
+
+    def remove_settlement(self, settlement_id: str) -> None:
+        settlement_index = self._find_settlement_index(settlement_id)
+        del self._transactions[settlement_index]
+
+    def edit_settlement(self, settlement: Settlement) -> None:
+        self._validate_settlement(settlement)
+        settlement_index = self._find_settlement_index(settlement.settlement_id)
+        self._transactions[settlement_index] = settlement
+
+    def _validate_settlement(self, settlement: Settlement) -> None:
+        if settlement.payer not in self.members:
+            raise ValueError("Payer is not in the group")
+        if settlement.receiver not in self.members:
+            raise ValueError("Receiver is not in the group")
+        if settlement.amount.amount <= 0:
+            raise ValueError("Settlement amount must be positive")
+
+    def _find_settlement_index(self, settlement_id: str) -> int:
+        for index, transaction in enumerate(self._transactions):
+            if (
+                isinstance(transaction, Settlement)
+                and transaction.settlement_id == settlement_id
+            ):
+                return index
+
+        raise ValueError("Settlement is not in the group")
