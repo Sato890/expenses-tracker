@@ -2,36 +2,30 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from decimal import Context, Decimal, localcontext
-from typing import TYPE_CHECKING
 
+from .allocation import validate_exact_allocations
+from .debt import Debt, calculate_debts
+from .identity import Member, User
 from .money import CALCULATION_PRECISION
-
-if TYPE_CHECKING:
-    from .debt import Debt
-    from .transaction import Expense, Transaction
-
-
-@dataclass(frozen=True)
-class Member:
-    member_id: str
-    name: str = field(compare=False)
-
-
-@dataclass(frozen=True)
-class User:
-    user_id: str
-    name: str = field(compare=False)
+from .transaction import Expense, Settlement, Transaction
 
 
 @dataclass
 class Group:
-    group_id: str
+    id: str
     name: str
-    members: list[Member] = field(default_factory=list)
+    _members: list[Member] = field(default_factory=list)
     member_to_user: dict[Member, User] = field(default_factory=dict)
     _transactions: list[Transaction] = field(
         default_factory=list, init=False, repr=False
     )
+
+    def __post_init__(self) -> None:
+        self._members = list(self._members)
+
+    @property
+    def members(self) -> tuple[Member, ...]:
+        return tuple(self._members)
 
     @property
     def transactions(self) -> tuple[Transaction, ...]:
@@ -39,15 +33,44 @@ class Group:
 
     @property
     def debts(self) -> list[Debt]:
-        from .debt import calculate_debts
-        from .transaction import Expense
-
         expenses = [
             transaction
             for transaction in self._transactions
             if isinstance(transaction, Expense)
         ]
         return calculate_debts(expenses)
+
+    def add_member(self, new_member: Member) -> None:
+        if any(member.id == new_member.id for member in self._members):
+            raise ValueError("Member ID already exists in the group")
+        self._members.append(new_member)
+
+    def remove_member(self, remove_member_id: str) -> None:
+        member_index = next(
+            (
+                index
+                for index, member in enumerate(self._members)
+                if member.id == remove_member_id
+            ),
+            None,
+        )
+        if member_index is None:
+            raise ValueError("Member is not in the group")
+
+        for transaction in self._transactions:
+            if transaction.payer.id == remove_member_id:
+                raise ValueError("Member has associated transactions")
+            if isinstance(transaction, Settlement):
+                if transaction.receiver.id == remove_member_id:
+                    raise ValueError("Member has associated transactions")
+            elif isinstance(transaction, Expense) and any(
+                allocation.receiver.id == remove_member_id
+                for allocation in transaction.allocations
+            ):
+                raise ValueError("Member has associated transactions")
+
+        removed_member = self._members.pop(member_index)
+        self.member_to_user.pop(removed_member, None)
 
     def calculate_member_settlement_amounts(self) -> dict[Member, Decimal]:
         settlement_amounts = {member: Decimal("0") for member in self.members}
@@ -60,8 +83,6 @@ class Group:
         return settlement_amounts
 
     def add_expense(self, expense: Expense) -> None:
-        from .transaction import Expense
-
         self._validate_expense(expense)
 
         if any(
@@ -83,8 +104,6 @@ class Group:
         self._transactions[expense_index] = expense
 
     def _validate_expense(self, expense: Expense) -> None:
-        from .allocation import validate_exact_allocations
-
         if expense.payer not in self.members:
             raise ValueError("Payer is not in the group")
 
@@ -95,8 +114,6 @@ class Group:
         validate_exact_allocations(expense.amount, list(expense.allocations))
 
     def _find_expense_index(self, expense_id: str) -> int:
-        from .transaction import Expense
-
         for index, transaction in enumerate(self._transactions):
             if (
                 isinstance(transaction, Expense)

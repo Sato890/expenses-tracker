@@ -5,7 +5,7 @@ import pytest
 
 from app.domain.allocation import Allocation
 from app.domain.debt import Debt
-from app.domain.group import Group, Member
+from app.domain.group import Group, Member, User
 from app.domain.money import Money
 from app.domain.transaction import Category, Expense
 
@@ -31,7 +31,7 @@ def create_expense(
 def test_derives_debts_from_current_transactions() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")
-    group = Group("group", "Group", members=[member_a, member_b])
+    group = Group("group", "Group", _members=[member_a, member_b])
     group.add_expense(create_expense(member_a, member_b, "5", "expense-a"))
 
     assert group.debts == [Debt(Money(Decimal("5"), "EUR"), member_b, member_a)]
@@ -47,7 +47,7 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
     member_c = Member("C", "C")
     member_d = Member("D", "D")
 
-    group = Group("group", "Group", members=[member_a, member_b, member_c, member_d])
+    group = Group("group", "Group", _members=[member_a, member_b, member_c, member_d])
     group.add_expense(create_expense(member_a, member_b, "3.0005", "expense-a"))
     group.add_expense(create_expense(member_c, member_a, "2.0005", "expense-b"))
 
@@ -65,7 +65,7 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
 def test_adds_valid_expense() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer, receiver])
+    group = Group("group", "Group", _members=[payer, receiver])
     expense = create_expense(payer, receiver, "5")
 
     group.add_expense(expense)
@@ -76,7 +76,7 @@ def test_adds_valid_expense() -> None:
 def test_rejects_expense_from_non_member_payer() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[receiver])
+    group = Group("group", "Group", _members=[receiver])
 
     with pytest.raises(ValueError, match="Payer is not in the group"):
         group.add_expense(create_expense(payer, receiver, "5"))
@@ -87,7 +87,7 @@ def test_rejects_expense_from_non_member_payer() -> None:
 def test_rejects_expense_for_non_member_receiver() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer])
+    group = Group("group", "Group", _members=[payer])
 
     with pytest.raises(ValueError, match="Receiver is not in the group"):
         group.add_expense(create_expense(payer, receiver, "5"))
@@ -98,7 +98,7 @@ def test_rejects_expense_for_non_member_receiver() -> None:
 def test_rejects_expense_with_invalid_allocations() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer, receiver])
+    group = Group("group", "Group", _members=[payer, receiver])
     expense = Expense(
         "expense",
         Money(Decimal("5"), "EUR"),
@@ -117,7 +117,7 @@ def test_rejects_expense_with_invalid_allocations() -> None:
 def test_rejects_duplicate_expense_id() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer, receiver])
+    group = Group("group", "Group", _members=[payer, receiver])
     expense = create_expense(payer, receiver, "5", "expense")
     duplicate = create_expense(payer, receiver, "4", "expense")
     group.add_expense(expense)
@@ -131,7 +131,7 @@ def test_rejects_duplicate_expense_id() -> None:
 def test_removes_expense_by_id() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer, receiver])
+    group = Group("group", "Group", _members=[payer, receiver])
     expense_a = create_expense(payer, receiver, "5", "expense-a")
     expense_b = create_expense(payer, receiver, "5", "expense-b")
     group.add_expense(expense_a)
@@ -145,7 +145,7 @@ def test_removes_expense_by_id() -> None:
 def test_edits_expense_by_id() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")
-    group = Group("group", "Group", members=[member_a, member_b])
+    group = Group("group", "Group", _members=[member_a, member_b])
     original = create_expense(member_a, member_b, "5", "expense")
     replacement = create_expense(member_b, member_a, "4", "expense")
     group.add_expense(original)
@@ -159,7 +159,7 @@ def test_edits_expense_by_id() -> None:
 def test_rejects_invalid_expense_edit_without_changing_transactions() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
-    group = Group("group", "Group", members=[payer, receiver])
+    group = Group("group", "Group", _members=[payer, receiver])
     original = create_expense(payer, receiver, "5", "expense")
     replacement = Expense(
         "expense",
@@ -175,3 +175,42 @@ def test_rejects_invalid_expense_edit_without_changing_transactions() -> None:
         group.edit_expense(replacement)
 
     assert group.transactions == (original,)
+
+
+def test_copies_members_supplied_at_construction() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    original_members = [payer, receiver]
+    group = Group("group", "Group", _members=original_members)
+    group.add_expense(create_expense(payer, receiver, "5"))
+
+    original_members.remove(receiver)
+
+    assert group.members == (payer, receiver)
+    assert group.calculate_member_settlement_amounts() == {
+        payer: Decimal("5"),
+        receiver: Decimal("-5"),
+    }
+
+
+def test_removes_member_without_transactions() -> None:
+    member = Member("A", "A")
+    user = User("user", "User")
+    group = Group("group", "Group", _members=[member], member_to_user={member: user})
+
+    group.remove_member(member.id)
+
+    assert group.members == ()
+    assert group.member_to_user == {}
+
+
+def test_rejects_removing_member_with_expense() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    group.add_expense(create_expense(payer, receiver, "5"))
+
+    with pytest.raises(ValueError, match="associated transactions"):
+        group.remove_member(receiver.id)
+
+    assert group.members == (payer, receiver)

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Context, localcontext
 
-from .group import Member
+from .identity import Member
 from .money import CALCULATION_PRECISION, Money
 from .transaction import Expense
 

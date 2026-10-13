@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from .allocation import Allocation
-from .group import Member
+from .identity import Member
 from .money import Money
 
 
