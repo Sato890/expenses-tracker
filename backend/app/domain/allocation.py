@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, Context, Decimal, localcontext
 
-from .group import Member
+from .identity import Member
 from .money import CALCULATION_PRECISION, Money
 
 ALLOCATION_UNIT = Decimal("1e-18")
