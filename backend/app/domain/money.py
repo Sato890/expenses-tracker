@@ -3,7 +3,7 @@ from decimal import ROUND_DOWN, Context, Decimal, localcontext
 from types import NotImplementedType
 
 # Up to 18 integer digits, 18 fractional digits, and one guard digit.
-CALCULATION_PRECISION = 37
+_CALCULATION_PRECISION = 37
 
 
 @dataclass(frozen=True)
@@ -15,7 +15,7 @@ class Money:
         if not isinstance(other, Money):
             return NotImplemented
 
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
+        with localcontext(Context(prec=_CALCULATION_PRECISION)):
             return Money(
                 amount=self.amount + other.amount,
                 currency=self.currency,
@@ -25,7 +25,7 @@ class Money:
         if not isinstance(other, Money):
             return NotImplemented
 
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
+        with localcontext(Context(prec=_CALCULATION_PRECISION)):
             return Money(
                 amount=self.amount - other.amount,
                 currency=self.currency,
@@ -44,16 +44,16 @@ class Money:
         if not isinstance(other, int):
             return NotImplemented
 
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
+        with localcontext(Context(prec=_CALCULATION_PRECISION)):
             return Money(self.amount * other, self.currency)
 
     def __truediv__(self, other: object) -> Money | NotImplementedType:
         if not isinstance(other, int):
             return NotImplemented
 
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
+        with localcontext(Context(prec=_CALCULATION_PRECISION)):
             return Money(self.amount / other, self.currency)
 
     def round_down_to(self, unit: Decimal) -> Money:
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
+        with localcontext(Context(prec=_CALCULATION_PRECISION)):
             return Money(self.amount.quantize(unit, rounding=ROUND_DOWN), self.currency)
