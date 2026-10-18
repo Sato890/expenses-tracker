@@ -91,6 +91,16 @@ def test_rejects_adding_debts_in_different_directions() -> None:
         debt + other_debt
 
 
+def test_rejects_unsupported_operands() -> None:
+    debt = Debt(Money(Decimal("5"), "EUR"), Member("A", "A"), Member("B", "B"))
+
+    with pytest.raises(TypeError):
+        debt + 5
+
+    with pytest.raises(TypeError):
+        debt - 5
+
+
 def test_combines_debts_in_same_direction() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")

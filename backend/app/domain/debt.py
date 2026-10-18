@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Context, localcontext
+from types import NotImplementedType
 
 from .identity import Member
 from .money import CALCULATION_PRECISION, Money
@@ -13,18 +14,18 @@ class Debt:
     debtor: Member
     creditor: Member
 
-    def __add__(self, other: Debt) -> Debt:
+    def __add__(self, other: object) -> Debt | NotImplementedType:
         if not isinstance(other, Debt):
-            raise NotImplementedError
+            return NotImplemented
 
         if not self.has_same_direction_as(other):
             raise ValueError("Can only add debts in the same direction")
 
         return Debt(self.amount + other.amount, self.debtor, self.creditor)
 
-    def __sub__(self, other: Debt) -> Debt | None:
+    def __sub__(self, other: object) -> Debt | NotImplementedType | None:
         if not isinstance(other, Debt):
-            raise NotImplementedError
+            return NotImplemented
 
         if not self.is_opposite_of(other):
             raise ValueError(

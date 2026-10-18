@@ -12,9 +12,14 @@ def test_add_money_to_money() -> None:
     assert value1 + value2 == Money(Decimal("10"), "EUR")
 
 
-def test_add_money_to_other() -> None:
-    with pytest.raises(NotImplementedError):
-        Money(Decimal("5"), "EUR") + 5
+def test_rejects_unsupported_operands() -> None:
+    money = Money(Decimal("5"), "EUR")
+
+    with pytest.raises(TypeError):
+        money + 5
+
+    with pytest.raises(TypeError):
+        money - 5
 
 
 def test_subtract_money_from_money() -> None:
