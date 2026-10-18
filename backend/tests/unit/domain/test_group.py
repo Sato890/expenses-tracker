@@ -5,7 +5,8 @@ import pytest
 
 from app.domain.allocation import Allocation
 from app.domain.debt import Debt
-from app.domain.group import Group, Member, User
+from app.domain.group import Group
+from app.domain.identity import Member, User
 from app.domain.money import Money
 from app.domain.transaction import Category, Expense, Settlement
 
