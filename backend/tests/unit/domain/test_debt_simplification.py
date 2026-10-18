@@ -62,7 +62,7 @@ def test_simplifies_circular_debts_to_two_debts() -> None:
     assert group.transactions == original_transactions
 
 
-def test_settles_group_with_minimum_number_of_payments() -> None:
+def test_matches_largest_remaining_debtor_and_creditor() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")
     member_c = Member("C", "C")
@@ -86,12 +86,12 @@ def test_settles_group_with_minimum_number_of_payments() -> None:
 
     debts = group.simplify_debts()
 
-    assert len(debts) == 3
-    assert set(debts) == {
-        Debt(Money(Decimal("8"), "EUR"), member_a, member_e),
-        Debt(Money(Decimal("7"), "EUR"), member_b, member_d),
-        Debt(Money(Decimal("5"), "EUR"), member_c, member_d),
-    }
+    assert debts == [
+        Debt(Money(Decimal("8"), "EUR"), member_a, member_d),
+        Debt(Money(Decimal("7"), "EUR"), member_b, member_e),
+        Debt(Money(Decimal("4"), "EUR"), member_c, member_d),
+        Debt(Money(Decimal("1"), "EUR"), member_c, member_e),
+    ]
 
 
 def test_returns_same_debts_when_member_and_expense_order_changes() -> None:
