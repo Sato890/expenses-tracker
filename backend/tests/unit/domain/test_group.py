@@ -188,6 +188,25 @@ def test_rejects_invalid_expense_edit_without_changing_transactions() -> None:
     assert group.transactions == (original,)
 
 
+def test_rejects_duplicate_member_ids_at_construction() -> None:
+    member = Member("A", "Alice")
+    duplicate = Member("A", "Bob")
+
+    with pytest.raises(ValueError, match="Member ID already exists in the group"):
+        Group("group", "Group", _members=[member, duplicate])
+
+
+def test_rejects_adding_duplicate_member_id() -> None:
+    member = Member("A", "Alice")
+    duplicate = Member("A", "Bob")
+    group = Group("group", "Group", _members=[member])
+
+    with pytest.raises(ValueError, match="Member ID already exists in the group"):
+        group.add_member(duplicate)
+
+    assert group.members == (member,)
+
+
 def test_copies_members_supplied_at_construction() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
