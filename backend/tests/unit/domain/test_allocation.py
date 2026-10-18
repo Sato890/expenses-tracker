@@ -77,9 +77,10 @@ def test_accepts_sub_cent_exact_allocations() -> None:
     allocation_a = Allocation(Member("A", "A"), Money(Decimal("6.0025"), "EUR"))
     allocation_b = Allocation(Member("B", "B"), Money(Decimal("4.0025"), "EUR"))
 
-    validate_exact_allocations(
-        Money(Decimal("10.005"), "EUR"), [allocation_a, allocation_b]
-    )
+    with localcontext(Context(prec=2)):
+        validate_exact_allocations(
+            Money(Decimal("10.005"), "EUR"), [allocation_a, allocation_b]
+        )
 
 
 def test_rejects_allocation_total_that_does_not_match_expense() -> None:

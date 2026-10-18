@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import ROUND_DOWN, Context, Decimal, localcontext
+from decimal import Decimal
 
 from .identity import Member
-from .money import CALCULATION_PRECISION, Money
+from .money import Money
 
 ALLOCATION_UNIT = Decimal("1e-18")
 
@@ -18,33 +18,19 @@ def allocate_equally(
     money_to_allocate: Money,
     members: list[Member],
 ) -> tuple[Allocation, ...]:
-    amount = money_to_allocate.amount
-    currency = money_to_allocate.currency
     member_count = len(members)
+    money_per_member = (money_to_allocate / member_count).round_down_to(ALLOCATION_UNIT)
+    remainder = money_to_allocate - money_per_member * member_count
+    extra_unit = Money(ALLOCATION_UNIT, money_to_allocate.currency)
+    allocations = []
 
-    calculation_context = Context(prec=CALCULATION_PRECISION, rounding=ROUND_DOWN)
+    for member in members:
+        share = money_per_member
+        if remainder.amount >= ALLOCATION_UNIT:
+            share += extra_unit
+            remainder -= extra_unit
 
-    with localcontext(calculation_context):
-        money_per_member = (amount / member_count).quantize(ALLOCATION_UNIT)
-        allocated_amount = money_per_member * member_count
-        residual_units = int((amount - allocated_amount) / ALLOCATION_UNIT)
-
-        allocations = []
-
-        for index, member in enumerate(members):
-            extra_amount = Decimal(0)
-
-            if index < residual_units:
-                extra_amount = ALLOCATION_UNIT
-
-            allocation_amount = money_per_member + extra_amount
-
-            allocations.append(
-                Allocation(
-                    receiver=member,
-                    share=Money(allocation_amount, currency),
-                )
-            )
+        allocations.append(Allocation(receiver=member, share=share))
 
     return tuple(allocations)
 
@@ -63,12 +49,9 @@ def validate_exact_allocations(
         if allocation.share.amount <= 0:
             raise ValueError("Allocation shares must be positive")
 
-    calculation_context = Context(prec=CALCULATION_PRECISION, rounding=ROUND_DOWN)
+    total = Money(Decimal("0"), expected_total.currency)
+    for allocation in allocations:
+        total += allocation.share
 
-    with localcontext(calculation_context):
-        total = Decimal("0")
-        for allocation in allocations:
-            total += allocation.share.amount
-
-    if total != expected_total.amount:
+    if total != expected_total:
         raise ValueError("The allocations must add up to the total")
