@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Context, Decimal, localcontext
 
 import pytest
 
@@ -62,15 +62,16 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
     group.add_expense(create_expense(member_a, member_b, "3.0005", "expense-a"))
     group.add_expense(create_expense(member_c, member_a, "2.0005", "expense-b"))
 
-    settlement_amounts = group.calculate_member_settlement_amounts()
+    with localcontext(Context(prec=2)):
+        settlement_amounts = group.calculate_member_settlement_amounts()
 
     assert settlement_amounts == {
-        member_a: Decimal("1.0000"),
-        member_b: Decimal("-3.0005"),
-        member_c: Decimal("2.0005"),
-        member_d: Decimal("0"),
+        member_a: Money(Decimal("1.0000"), "EUR"),
+        member_b: Money(Decimal("-3.0005"), "EUR"),
+        member_c: Money(Decimal("2.0005"), "EUR"),
+        member_d: Money(Decimal("0"), "EUR"),
     }
-    assert sum(settlement_amounts.values()) == Decimal("0")
+    assert sum(amount.amount for amount in settlement_amounts.values()) == Decimal("0")
 
 
 def test_adds_valid_expense() -> None:
@@ -218,8 +219,8 @@ def test_copies_members_supplied_at_construction() -> None:
 
     assert group.members == (payer, receiver)
     assert group.calculate_member_settlement_amounts() == {
-        payer: Decimal("5"),
-        receiver: Decimal("-5"),
+        payer: Money(Decimal("5"), "EUR"),
+        receiver: Money(Decimal("-5"), "EUR"),
     }
 
 
@@ -255,8 +256,8 @@ def test_reduces_debt_after_partial_settlement() -> None:
     group.add_settlement(create_settlement(member_b, member_a, "4"))
 
     assert group.calculate_member_settlement_amounts() == {
-        member_a: Decimal("6"),
-        member_b: Decimal("-6"),
+        member_a: Money(Decimal("6"), "EUR"),
+        member_b: Money(Decimal("-6"), "EUR"),
     }
 
 
@@ -270,8 +271,8 @@ def test_clears_debt_after_full_settlement() -> None:
 
     assert group.debts == []
     assert group.calculate_member_settlement_amounts() == {
-        member_a: Decimal("0"),
-        member_b: Decimal("0"),
+        member_a: Money(Decimal("0"), "EUR"),
+        member_b: Money(Decimal("0"), "EUR"),
     }
 
 
@@ -284,8 +285,8 @@ def test_reverses_debt_after_excess_settlement() -> None:
     group.add_settlement(create_settlement(member_b, member_a, "12"))
 
     assert group.calculate_member_settlement_amounts() == {
-        member_a: Decimal("-2"),
-        member_b: Decimal("2"),
+        member_a: Money(Decimal("-2"), "EUR"),
+        member_b: Money(Decimal("2"), "EUR"),
     }
 
 
@@ -357,8 +358,8 @@ def test_removes_settlement_by_id() -> None:
     assert group.transactions == (expense, other_payment)
     assert group.debts == [Debt(Money(Decimal("9"), "EUR"), member_b, member_a)]
     assert group.calculate_member_settlement_amounts() == {
-        member_a: Decimal("9"),
-        member_b: Decimal("-9"),
+        member_a: Money(Decimal("9"), "EUR"),
+        member_b: Money(Decimal("-9"), "EUR"),
     }
 
 
@@ -377,8 +378,8 @@ def test_edits_settlement_by_id() -> None:
     assert group.transactions == (expense, replacement)
     assert group.debts == [Debt(Money(Decimal("3"), "EUR"), member_b, member_a)]
     assert group.calculate_member_settlement_amounts() == {
-        member_a: Decimal("3"),
-        member_b: Decimal("-3"),
+        member_a: Money(Decimal("3"), "EUR"),
+        member_b: Money(Decimal("-3"), "EUR"),
     }
 
 
@@ -455,5 +456,8 @@ def test_settlement_changes_debts_without_changing_spending() -> None:
     assert spending_after == spending_before == Decimal("10.005")
     assert group.debts == [Debt(Money(Decimal("6.0025"), "EUR"), member_b, member_a)]
     amounts = group.calculate_member_settlement_amounts()
-    assert amounts == {member_a: Decimal("6.0025"), member_b: Decimal("-6.0025")}
-    assert sum(amounts.values()) == 0
+    assert amounts == {
+        member_a: Money(Decimal("6.0025"), "EUR"),
+        member_b: Money(Decimal("-6.0025"), "EUR"),
+    }
+    assert sum(amount.amount for amount in amounts.values()) == 0

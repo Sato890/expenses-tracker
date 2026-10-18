@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Context, localcontext
+from types import NotImplementedType
 
 from .identity import Member
-from .money import CALCULATION_PRECISION, Money
+from .money import Money
 from .transaction import Expense, Settlement, Transaction
 
 
@@ -13,18 +13,18 @@ class Debt:
     debtor: Member
     creditor: Member
 
-    def __add__(self, other: Debt) -> Debt:
+    def __add__(self, other: object) -> Debt | NotImplementedType:
         if not isinstance(other, Debt):
-            raise NotImplementedError
+            return NotImplemented
 
         if not self.has_same_direction_as(other):
             raise ValueError("Can only add debts in the same direction")
 
         return Debt(self.amount + other.amount, self.debtor, self.creditor)
 
-    def __sub__(self, other: Debt) -> Debt | None:
+    def __sub__(self, other: object) -> Debt | NotImplementedType | None:
         if not isinstance(other, Debt):
-            raise NotImplementedError
+            return NotImplemented
 
         if not self.is_opposite_of(other):
             raise ValueError(
@@ -37,7 +37,7 @@ class Debt:
             return Debt(difference, self.debtor, self.creditor)
         elif difference.amount < 0:
             return Debt(
-                Money(-difference.amount, difference.currency),
+                -difference,
                 other.debtor,
                 other.creditor,
             )
@@ -74,27 +74,26 @@ def calculate_settlement_debts(settlement: Settlement) -> list[Debt]:
 def calculate_debts(transactions: Sequence[Transaction]) -> list[Debt]:
     debts_by_members: dict[frozenset[Member], Debt] = {}
 
-    with localcontext(Context(prec=CALCULATION_PRECISION)):
-        for transaction in transactions:
-            if isinstance(transaction, Expense):
-                transaction_debts = calculate_expense_debts(transaction)
+    for transaction in transactions:
+        if isinstance(transaction, Expense):
+            transaction_debts = calculate_expense_debts(transaction)
+        else:
+            transaction_debts = calculate_settlement_debts(transaction)
+
+        for transaction_debt in transaction_debts:
+            member_pair = _get_member_pair(transaction_debt)
+            debt = debts_by_members.get(member_pair)
+
+            if debt is None:
+                debts_by_members[member_pair] = transaction_debt
+                continue
+
+            net_debt = _get_net_debts(debt, transaction_debt)
+
+            if net_debt is None:
+                del debts_by_members[member_pair]
             else:
-                transaction_debts = calculate_settlement_debts(transaction)
-
-            for transaction_debt in transaction_debts:
-                member_pair = _get_member_pair(transaction_debt)
-                debt = debts_by_members.get(member_pair)
-
-                if debt is None:
-                    debts_by_members[member_pair] = transaction_debt
-                    continue
-
-                net_debt = _get_net_debts(debt, transaction_debt)
-
-                if net_debt is None:
-                    del debts_by_members[member_pair]
-                else:
-                    debts_by_members[member_pair] = net_debt
+                debts_by_members[member_pair] = net_debt
 
     return list(debts_by_members.values())
 

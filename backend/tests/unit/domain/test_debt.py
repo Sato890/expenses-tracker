@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Context, Decimal, localcontext
 
 import pytest
 
@@ -89,6 +89,28 @@ def test_rejects_adding_debts_in_different_directions() -> None:
 
     with pytest.raises(ValueError, match="same direction"):
         debt + other_debt
+
+
+def test_rejects_unsupported_operands() -> None:
+    debt = Debt(Money(Decimal("5"), "EUR"), Member("A", "A"), Member("B", "B"))
+
+    with pytest.raises(TypeError):
+        debt + 5
+
+    with pytest.raises(TypeError):
+        debt - 5
+
+
+def test_preserves_precision_when_opposite_debt_reverses_direction() -> None:
+    member_a = Member("A", "A")
+    member_b = Member("B", "B")
+    debt = Debt(Money(Decimal("10.005"), "EUR"), member_a, member_b)
+    opposite_debt = Debt(Money(Decimal("12.0005"), "EUR"), member_b, member_a)
+
+    with localcontext(Context(prec=2)):
+        result = debt - opposite_debt
+
+    assert result == Debt(Money(Decimal("1.9955"), "EUR"), member_b, member_a)
 
 
 def test_combines_debts_in_same_direction() -> None:

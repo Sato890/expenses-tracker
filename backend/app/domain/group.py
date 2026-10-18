@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
 
 from .allocation import validate_exact_allocations
 from .debt import Debt, calculate_debts
 from .debt_simplification import simplify_debts
 from .identity import Member, User
-from .money import CALCULATION_PRECISION
+from .money import Money
 from .transaction import Expense, Settlement, Transaction
 
 
@@ -71,13 +71,14 @@ class Group:
         removed_member = self._members.pop(member_index)
         self.member_to_user.pop(removed_member, None)
 
-    def calculate_member_settlement_amounts(self) -> dict[Member, Decimal]:
-        settlement_amounts = {member: Decimal("0") for member in self.members}
+    def calculate_member_settlement_amounts(self) -> dict[Member, Money]:
+        settlement_amounts = {
+            member: Money(Decimal("0"), "EUR") for member in self.members
+        }
 
-        with localcontext(Context(prec=CALCULATION_PRECISION)):
-            for debt in self.debts:
-                settlement_amounts[debt.debtor] -= debt.amount.amount
-                settlement_amounts[debt.creditor] += debt.amount.amount
+        for debt in self.debts:
+            settlement_amounts[debt.debtor] -= debt.amount
+            settlement_amounts[debt.creditor] += debt.amount
 
         return settlement_amounts
 
