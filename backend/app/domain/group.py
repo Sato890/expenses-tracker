@@ -5,6 +5,7 @@ from decimal import Context, Decimal, localcontext
 
 from .allocation import validate_exact_allocations
 from .debt import Debt, calculate_debts
+from .debt_simplification import simplify_debts
 from .identity import Member, User
 from .money import CALCULATION_PRECISION
 from .transaction import Expense, Settlement, Transaction
@@ -81,6 +82,9 @@ class Group:
                 settlement_amounts[debt.creditor] += debt.amount.amount
 
         return settlement_amounts
+
+    def simplify_debts(self) -> list[Debt]:
+        return simplify_debts(self.calculate_member_settlement_amounts())
 
     def add_expense(self, expense: Expense) -> None:
         self._validate_expense(expense)
