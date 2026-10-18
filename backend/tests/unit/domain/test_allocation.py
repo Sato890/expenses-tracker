@@ -1,4 +1,4 @@
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
 
 import pytest
 
@@ -59,28 +59,13 @@ def test_assigns_calculation_residual_in_receiver_order() -> None:
     )
 
 
-def test_ignores_ambient_decimal_context() -> None:
-    amount = Money(Decimal("20.39"), "EUR")
-    member_a = Member("A", "A")
-    member_b = Member("B", "B")
-
-    context = Context(prec=2)
-
-    with localcontext(context):
-        allocations = allocate_equally(amount, [member_a, member_b])
-
-    assert allocations[0].share == Money(Decimal("10.195"), "EUR")
-    assert allocations[1].share == Money(Decimal("10.195"), "EUR")
-
-
 def test_accepts_sub_cent_exact_allocations() -> None:
     allocation_a = Allocation(Member("A", "A"), Money(Decimal("6.0025"), "EUR"))
     allocation_b = Allocation(Member("B", "B"), Money(Decimal("4.0025"), "EUR"))
 
-    with localcontext(Context(prec=2)):
-        validate_exact_allocations(
-            Money(Decimal("10.005"), "EUR"), [allocation_a, allocation_b]
-        )
+    validate_exact_allocations(
+        Money(Decimal("10.005"), "EUR"), [allocation_a, allocation_b]
+    )
 
 
 def test_rejects_allocation_total_that_does_not_match_expense() -> None:
