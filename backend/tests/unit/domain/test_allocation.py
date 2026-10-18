@@ -52,11 +52,11 @@ def test_assigns_calculation_residual_in_receiver_order() -> None:
 
     allocations = allocate_equally(amount, receivers)
 
-    assert allocations == [
+    assert allocations == (
         Allocation(member_a, Money(Decimal("3.333333333333333334"), "EUR")),
         Allocation(member_b, Money(Decimal("3.333333333333333333"), "EUR")),
         Allocation(member_c, Money(Decimal("3.333333333333333333"), "EUR")),
-    ]
+    )
 
 
 def test_ignores_ambient_decimal_context() -> None:

@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -27,7 +28,7 @@ class Expense:
         payer: Member,
         date: date,
         category: Category,
-        allocations: Allocation | tuple[Allocation, ...],
+        allocations: Allocation | Sequence[Allocation],
     ) -> None:
         if isinstance(allocations, Allocation):
             allocations = (allocations,)
@@ -37,7 +38,7 @@ class Expense:
         object.__setattr__(self, "payer", payer)
         object.__setattr__(self, "date", date)
         object.__setattr__(self, "category", category)
-        object.__setattr__(self, "allocations", allocations)
+        object.__setattr__(self, "allocations", tuple(allocations))
 
 
 @dataclass(frozen=True)

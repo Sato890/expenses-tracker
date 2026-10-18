@@ -113,7 +113,7 @@ class Group:
             if allocation.receiver not in self.members:
                 raise ValueError("Receiver is not in the group")
 
-        validate_exact_allocations(expense.amount, list(expense.allocations))
+        validate_exact_allocations(expense.amount, expense.allocations)
 
     def _find_expense_index(self, expense_id: str) -> int:
         for index, transaction in enumerate(self._transactions):

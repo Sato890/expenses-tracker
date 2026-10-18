@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, Context, Decimal, localcontext
 
@@ -16,7 +17,7 @@ class Allocation:
 def allocate_equally(
     money_to_allocate: Money,
     members: list[Member],
-) -> list[Allocation]:
+) -> tuple[Allocation, ...]:
     amount = money_to_allocate.amount
     currency = money_to_allocate.currency
     member_count = len(members)
@@ -45,12 +46,12 @@ def allocate_equally(
                 )
             )
 
-    return allocations
+    return tuple(allocations)
 
 
 def validate_exact_allocations(
     expected_total: Money,
-    allocations: list[Allocation],
+    allocations: Sequence[Allocation],
 ) -> None:
     if expected_total.amount <= 0:
         raise ValueError("The expense amount must be positive")

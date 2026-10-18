@@ -26,7 +26,7 @@ def test_creates_debts_for_expense_receivers() -> None:
         payer,
         date.today(),
         Category("Other"),
-        tuple(allocate_equally(expense_amount, [receiver_b, receiver_c])),
+        allocate_equally(expense_amount, [receiver_b, receiver_c]),
     )
 
     debts = calculate_expense_debts(expense)
@@ -46,7 +46,7 @@ def test_skips_debt_for_payer_allocation() -> None:
         payer,
         date.today(),
         Category("Other"),
-        tuple(allocate_equally(expense_amount, [payer])),
+        allocate_equally(expense_amount, [payer]),
     )
 
     debts = calculate_expense_debts(expense)
