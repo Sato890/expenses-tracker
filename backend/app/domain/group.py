@@ -22,7 +22,10 @@ class Group:
     )
 
     def __post_init__(self) -> None:
-        self._members = list(self._members)
+        members = self._members
+        self._members = []
+        for member in members:
+            self.add_member(member)
 
     @property
     def members(self) -> tuple[Member, ...]:
