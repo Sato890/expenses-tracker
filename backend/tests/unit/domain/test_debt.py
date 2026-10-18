@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
 
 import pytest
 
@@ -104,13 +104,20 @@ def test_rejects_unsupported_operands() -> None:
 def test_preserves_precision_when_opposite_debt_reverses_direction() -> None:
     member_a = Member("A", "A")
     member_b = Member("B", "B")
-    debt = Debt(Money(Decimal("10.005"), "EUR"), member_a, member_b)
-    opposite_debt = Debt(Money(Decimal("12.0005"), "EUR"), member_b, member_a)
+    debt = Debt(Money(Decimal("1"), "EUR"), member_a, member_b)
+    opposite_debt = Debt(
+        Money(Decimal("333333333333333333.333333333333333334"), "EUR"),
+        member_b,
+        member_a,
+    )
 
-    with localcontext(Context(prec=2)):
-        result = debt - opposite_debt
+    result = debt - opposite_debt
 
-    assert result == Debt(Money(Decimal("1.9955"), "EUR"), member_b, member_a)
+    assert result == Debt(
+        Money(Decimal("333333333333333332.333333333333333334"), "EUR"),
+        member_b,
+        member_a,
+    )
 
 
 def test_combines_debts_in_same_direction() -> None:

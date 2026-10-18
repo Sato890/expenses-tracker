@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
 
 import pytest
 
@@ -62,8 +62,7 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
     group.add_expense(create_expense(member_a, member_b, "3.0005", "expense-a"))
     group.add_expense(create_expense(member_c, member_a, "2.0005", "expense-b"))
 
-    with localcontext(Context(prec=2)):
-        settlement_amounts = group.calculate_member_settlement_amounts()
+    settlement_amounts = group.calculate_member_settlement_amounts()
 
     assert settlement_amounts == {
         member_a: Money(Decimal("1.0000"), "EUR"),
