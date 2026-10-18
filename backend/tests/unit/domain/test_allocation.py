@@ -7,7 +7,7 @@ from app.domain.allocation import (
     allocate_equally,
     validate_exact_allocations,
 )
-from app.domain.group import Member
+from app.domain.identity import Member
 from app.domain.money import Money
 
 

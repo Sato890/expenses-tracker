@@ -10,7 +10,7 @@ from app.domain.debt import (
     calculate_expense_debts,
     calculate_settlement_debts,
 )
-from app.domain.group import Member
+from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Category, Expense, Settlement
 
