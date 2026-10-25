@@ -9,6 +9,23 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: expenses_manager_test
+          POSTGRES_USER: expenses_test_user
+          POSTGRES_PASSWORD: change_me
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U expenses_test_user -d expenses_manager_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://expenses_test_user:change_me@localhost:5432/expenses_manager_test
+      TEST_DATABASE_URL: postgresql+psycopg://expenses_test_user:change_me@localhost:5432/expenses_manager_test
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.1.0
