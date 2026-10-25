@@ -1,15 +1,29 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
+from uuid import UUID, uuid4
 
 from .allocation import Allocation
 from .identity import Member
 from .money import Money
 
 
-@dataclass(frozen=True)
+@dataclass(init=False, unsafe_hash=True)
 class Category:
-    name: str
+    _id: UUID
+    _name: str = field(compare=False)
+
+    def __init__(self, name: str, id: UUID | None = None) -> None:
+        self._id = id if id is not None else uuid4()
+        self._name = name
+
+    @property
+    def id(self) -> UUID:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return self._name
 
 
 @dataclass(frozen=True, init=False)
