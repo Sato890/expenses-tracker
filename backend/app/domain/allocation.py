@@ -8,10 +8,22 @@ from .money import Money
 ALLOCATION_UNIT = Decimal("1e-18")
 
 
-@dataclass(frozen=True)
+@dataclass(init=False, unsafe_hash=True)
 class Allocation:
-    receiver: Member
-    share: Money
+    _receiver: Member
+    _share: Money
+
+    def __init__(self, receiver: Member, share: Money) -> None:
+        self._receiver = receiver
+        self._share = share
+
+    @property
+    def receiver(self) -> Member:
+        return self._receiver
+
+    @property
+    def share(self) -> Money:
+        return self._share
 
 
 def allocate_equally(
