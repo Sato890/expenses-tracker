@@ -38,3 +38,11 @@ jobs:
           uv run ruff format --check --diff .
           uv run python -m pytest
         working-directory: backend
+      - name: Check database migrations
+        working-directory: backend
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+          uv run alembic check
