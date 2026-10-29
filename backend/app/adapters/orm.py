@@ -123,7 +123,6 @@ allocations = Table(
 
 def _initialize_unmapped_group_state(group: Group, _context: object) -> None:
     group.member_to_user = {}
-    group._transactions = []
 
 
 def start_mappers() -> None:
@@ -200,7 +199,13 @@ def start_mappers() -> None:
                 order_by=members.c.id,
                 lazy="selectin",
                 cascade="all, delete-orphan",
-            )
+            ),
+            "_transactions": relationship(
+                Expense,
+                order_by=(expenses.c.date.desc(), expenses.c.id.desc()),
+                lazy="selectin",
+                cascade="all, delete-orphan",
+            ),
         },
     )
     event.listen(Group, "load", _initialize_unmapped_group_state)
