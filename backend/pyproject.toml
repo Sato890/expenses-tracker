@@ -19,6 +19,7 @@ dev = [
 ]
 
 [tool.ruff]
+extend-exclude = ["alembic/versions"]
 lint.extend-select = [
     "PTH",
     "FAST",
