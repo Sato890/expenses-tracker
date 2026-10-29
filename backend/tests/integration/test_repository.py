@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.adapters.orm import mapper_registry, metadata, start_mappers
-from app.adapters.repository import SqlAlchemyGroupRepository
+from app.adapters.repository import (
+    SqlAlchemyCategoryRepository,
+    SqlAlchemyGroupRepository,
+)
 from app.config import ENV_FILE
 from app.domain.allocation import Allocation
 from app.domain.group import Group
@@ -198,3 +201,22 @@ def test_preserves_history_when_two_sessions_append(
             "append-1",
             "append-2",
         }
+
+
+def test_repository_can_retrieve_category_by_id(schema_engine: Engine) -> None:
+    category = Category("Groceries")
+    category_id = category.id
+    with Session(schema_engine) as session:
+        session.add_all([category, Category("Transport")])
+        session.commit()
+
+    with Session(schema_engine) as session:
+        loaded = SqlAlchemyCategoryRepository(session).get(category_id)
+
+        assert loaded is not None
+        assert (loaded.id, loaded.name) == (category_id, "Groceries")
+
+
+def test_repository_returns_none_for_missing_category(schema_engine: Engine) -> None:
+    with Session(schema_engine) as session:
+        assert SqlAlchemyCategoryRepository(session).get(uuid4()) is None
