@@ -69,19 +69,20 @@ def test_repository_can_reconstruct_group_with_expenses(
     with Session(schema_engine) as session:
         loaded = SqlAlchemyGroupRepository(session).get("group-1")
         expected_group = create_group()
+        expected_payer, expected_receiver = expected_group.members
         expected_expense = Expense(
             "expense-1",
             Money(Decimal("10"), "EUR"),
-            Member("member-1", "Satoshi"),
+            expected_payer,
             date(2026, 10, 1),
             Category("Other", id=category_id),
             [
                 Allocation(
-                    Member("member-1", "Satoshi"),
+                    expected_payer,
                     Money(Decimal("3.333333333333333333"), "EUR"),
                 ),
                 Allocation(
-                    Member("member-2", "Ilaria"),
+                    expected_receiver,
                     Money(Decimal("6.666666666666666667"), "EUR"),
                 ),
             ],

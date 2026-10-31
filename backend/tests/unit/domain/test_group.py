@@ -107,6 +107,34 @@ def test_rejects_expense_for_non_member_receiver() -> None:
     assert group.transactions == ()
 
 
+@pytest.mark.parametrize("other_group_role", ["payer", "receiver"])
+def test_rejects_expense_member_from_another_group_with_the_same_id(
+    other_group_role: str,
+) -> None:
+    payer = Member("A", "Alex")
+    receiver = Member("B", "Bea")
+    group = Group("group-a", "Group A", _members=[payer, receiver])
+    other_group = Group(
+        "group-b",
+        "Group B",
+        _members=[Member("A", "Other Alex"), Member("B", "Other Bea")],
+    )
+    other_payer, other_receiver = other_group.members
+
+    with pytest.raises(
+        ValueError, match=f"{other_group_role.capitalize()} is not in the group"
+    ):
+        group.add_expense(
+            create_expense(
+                other_payer if other_group_role == "payer" else payer,
+                other_receiver if other_group_role == "receiver" else receiver,
+                "5",
+            )
+        )
+
+    assert group.transactions == ()
+
+
 def test_rejects_expense_with_invalid_allocations() -> None:
     payer = Member("A", "A")
     receiver = Member("B", "B")
@@ -313,6 +341,34 @@ def test_rejects_settlement_with_non_member(missing_role: str) -> None:
         ValueError, match=f"{missing_role.capitalize()} is not in the group"
     ):
         group.add_settlement(create_settlement(payer, receiver, "5"))
+
+    assert group.transactions == ()
+
+
+@pytest.mark.parametrize("other_group_role", ["payer", "receiver"])
+def test_rejects_settlement_member_from_another_group_with_the_same_id(
+    other_group_role: str,
+) -> None:
+    payer = Member("A", "Alex")
+    receiver = Member("B", "Bea")
+    group = Group("group-a", "Group A", _members=[payer, receiver])
+    other_group = Group(
+        "group-b",
+        "Group B",
+        _members=[Member("A", "Other Alex"), Member("B", "Other Bea")],
+    )
+    other_payer, other_receiver = other_group.members
+
+    with pytest.raises(
+        ValueError, match=f"{other_group_role.capitalize()} is not in the group"
+    ):
+        group.add_settlement(
+            create_settlement(
+                other_payer if other_group_role == "payer" else payer,
+                other_receiver if other_group_role == "receiver" else receiver,
+                "5",
+            )
+        )
 
     assert group.transactions == ()
 
