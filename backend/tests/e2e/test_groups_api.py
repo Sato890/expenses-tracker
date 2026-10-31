@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from app.adapters.orm import groups
+from app.adapters.orm import groups, members
 
 
 def test_lists_groups(schema_engine: Engine, client: TestClient) -> None:
@@ -50,3 +50,48 @@ def test_rejects_invalid_group_name(client: TestClient) -> None:
     response = client.post("/groups", json={"name": "  "})
 
     assert response.status_code == 422
+
+
+def test_lists_group_members(schema_engine: Engine, client: TestClient) -> None:
+    with Session(schema_engine) as session:
+        session.execute(groups.insert().values(id="group-1", name="Home"))
+        session.execute(groups.insert().values(id="group-2", name="Trip"))
+        session.execute(
+            members.insert(),
+            [
+                {"group_id": "group-1", "id": "member-2", "name": "Ilaria"},
+                {"group_id": "group-1", "id": "member-1", "name": "Satoshi"},
+                {"group_id": "group-2", "id": "member-3", "name": "Alex"},
+            ],
+        )
+        session.commit()
+
+    response = client.get("/groups/group-1/members")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {"id": "member-1", "display_name": "Satoshi"},
+            {"id": "member-2", "display_name": "Ilaria"},
+        ]
+    }
+
+
+def test_lists_no_members_in_existing_group(
+    schema_engine: Engine, client: TestClient
+) -> None:
+    with Session(schema_engine) as session:
+        session.execute(groups.insert().values(id="group-1", name="Home"))
+        session.commit()
+
+    response = client.get("/groups/group-1/members")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": []}
+
+
+def test_rejects_members_request_for_missing_group(client: TestClient) -> None:
+    response = client.get("/groups/missing/members")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "GROUP_NOT_FOUND"
