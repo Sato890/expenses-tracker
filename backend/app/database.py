@@ -1,14 +1,13 @@
 from collections.abc import Iterator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session
 
 from app.config import Settings
 
 settings = Settings()
 
 engine = create_engine(str(settings.database_url))
-SessionFactory = sessionmaker(bind=engine)
 
 
 class Base(DeclarativeBase):
@@ -16,5 +15,5 @@ class Base(DeclarativeBase):
 
 
 def get_session() -> Iterator[Session]:
-    with SessionFactory() as session:
+    with Session(engine) as session:
         yield session
