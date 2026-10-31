@@ -5,13 +5,16 @@ from sqlalchemy.orm import Session
 from app.adapters.orm import groups
 
 
-def test_lists_groups(schema_engine: Engine, client: TestClient) -> None:
+def test_lists_groups_by_name_then_id(
+    schema_engine: Engine, client: TestClient
+) -> None:
     with Session(schema_engine) as session:
         session.execute(
             groups.insert(),
             [
-                {"id": "group-1", "name": "Home"},
                 {"id": "group-2", "name": "Trip"},
+                {"id": "group-3", "name": "Home"},
+                {"id": "group-1", "name": "Home"},
             ],
         )
         session.commit()
@@ -21,6 +24,7 @@ def test_lists_groups(schema_engine: Engine, client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json() == [
         {"id": "group-1", "name": "Home"},
+        {"id": "group-3", "name": "Home"},
         {"id": "group-2", "name": "Trip"},
     ]
 

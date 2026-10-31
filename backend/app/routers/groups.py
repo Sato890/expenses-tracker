@@ -24,7 +24,9 @@ def list_groups(
 ) -> list[dict[str, str]]:
     return [
         {"id": row.id, "name": row.name}
-        for row in session.execute(select(groups.c.id, groups.c.name)).all()
+        for row in session.execute(
+            select(groups.c.id, groups.c.name).order_by(groups.c.name, groups.c.id)
+        ).all()
     ]
 
 
