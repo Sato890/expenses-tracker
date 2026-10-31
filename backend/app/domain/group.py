@@ -107,11 +107,11 @@ class Group:
         self._transactions[expense_index] = expense
 
     def _validate_expense(self, expense: Expense) -> None:
-        if expense.payer not in self.members:
+        if not self._has_member(expense.payer):
             raise ValueError("Payer is not in the group")
 
         for allocation in expense.allocations:
-            if allocation.receiver not in self.members:
+            if not self._has_member(allocation.receiver):
                 raise ValueError("Receiver is not in the group")
 
         validate_exact_allocations(expense.amount, expense.allocations)
@@ -148,12 +148,15 @@ class Group:
         self._transactions[settlement_index] = settlement
 
     def _validate_settlement(self, settlement: Settlement) -> None:
-        if settlement.payer not in self.members:
+        if not self._has_member(settlement.payer):
             raise ValueError("Payer is not in the group")
-        if settlement.receiver not in self.members:
+        if not self._has_member(settlement.receiver):
             raise ValueError("Receiver is not in the group")
         if settlement.amount.amount <= 0:
             raise ValueError("Settlement amount must be positive")
+
+    def _has_member(self, candidate: Member) -> bool:
+        return any(member is candidate for member in self._members)
 
     def _find_settlement_index(self, settlement_id: str) -> int:
         for index, transaction in enumerate(self._transactions):
