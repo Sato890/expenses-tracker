@@ -19,6 +19,12 @@ class CreateGroup(BaseModel):
     name: str = Field(min_length=1)
 
 
+class CreateMember(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -71,6 +77,37 @@ def list_members(
             ).all()
         ]
     }
+
+
+@app.post(
+    "/groups/{group_id}/members",
+    status_code=status.HTTP_201_CREATED,
+    response_model=None,
+)
+def create_member(
+    group_id: str,
+    member: CreateMember,
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, str] | JSONResponse:
+    group_exists = session.execute(
+        select(groups.c.id).where(groups.c.id == group_id)
+    ).scalar_one_or_none()
+    if group_exists is None:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "error": {"code": "GROUP_NOT_FOUND", "message": "Group not found."}
+            },
+        )
+
+    member_id = uuid4().hex
+    session.execute(
+        members.insert().values(
+            group_id=group_id, id=member_id, name=member.display_name
+        )
+    )
+    session.commit()
+    return {"id": member_id, "display_name": member.display_name}
 
 
 @app.get("/categories")
