@@ -240,6 +240,35 @@ def test_rejects_invalid_expense_context_without_writing(
         assert session.execute(select(expenses.c.id)).all() == []
 
 
+@pytest.mark.usefixtures("prepared_expense_group")
+def test_rejects_equal_expense_below_allocation_unit_without_writing(
+    schema_engine: Engine, client: TestClient
+) -> None:
+    receiver_ids = [f"receiver-{index}" for index in range(101)]
+    with Session(schema_engine) as session:
+        session.execute(
+            members.insert(),
+            [
+                {"group_id": GROUP_ID, "id": receiver_id, "name": receiver_id}
+                for receiver_id in receiver_ids
+            ],
+        )
+        session.commit()
+    payload = expense_request()
+    payload["amount"] = "0.0000000000000001"
+    payload["split"] = {"type": "equal", "receiver_ids": receiver_ids}
+
+    response = client.post(f"/groups/{GROUP_ID}/transactions", json=payload)
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": {"code": "INVALID_REQUEST", "message": "Invalid request."}
+    }
+    with Session(schema_engine) as session:
+        assert session.execute(select(expenses.c.id)).all() == []
+        assert session.execute(select(allocations.c.expense_id)).all() == []
+
+
 def test_rejects_malformed_expense_json(client: TestClient) -> None:
     response = client.post(
         f"/groups/{GROUP_ID}/transactions",
