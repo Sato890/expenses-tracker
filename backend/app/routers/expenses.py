@@ -21,6 +21,7 @@ from app.domain.transaction import Expense
 from app.services import (
     GroupNotFoundError,
     InvalidCategoryError,
+    InvalidExpenseRequestError,
     InvalidParticipantError,
     create_equal_expense,
     list_group_expenses,
@@ -163,7 +164,7 @@ def create_expense(
             "INVALID_PARTICIPANT",
             "A selected participant does not belong to this group.",
         )
-    except ValueError:
+    except InvalidExpenseRequestError:
         return error_response(422, "INVALID_REQUEST", "Invalid request.")
 
     return expense_response(group_id, expense)

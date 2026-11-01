@@ -253,11 +253,14 @@ def test_rejects_malformed_expense_json(client: TestClient) -> None:
     }
 
 
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
 def test_hides_unexpected_expense_error(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    error_type: type[Exception],
 ) -> None:
     def fail(*_args: object, **_kwargs: object) -> None:
-        raise RuntimeError("secret database detail")
+        raise error_type("secret database detail")
 
     monkeypatch.setattr(expense_routes, "create_equal_expense", fail)
     with TestClient(app, raise_server_exceptions=False) as safe_client:

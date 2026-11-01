@@ -32,6 +32,10 @@ class InvalidParticipantError(ValueError):
     pass
 
 
+class InvalidExpenseRequestError(ValueError):
+    pass
+
+
 def list_group_expenses(
     group_id: str,
     limit: int,
@@ -65,11 +69,11 @@ def create_equal_expense(
             raise InvalidCategoryError(category_id)
 
         if amount.amount <= 0:
-            raise ValueError("The expense amount must be positive")
+            raise InvalidExpenseRequestError("The expense amount must be positive")
         if not receiver_ids:
-            raise ValueError("At least one receiver is required")
+            raise InvalidExpenseRequestError("At least one receiver is required")
         if len(receiver_ids) != len(set(receiver_ids)):
-            raise ValueError("Receiver IDs must be unique")
+            raise InvalidExpenseRequestError("Receiver IDs must be unique")
 
         members = {member.id: member for member in group.members}
         if payer_id not in members or any(
