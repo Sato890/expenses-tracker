@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 
 from app.adapters.orm import start_mappers
 from app.api_errors import error_response
@@ -22,6 +23,18 @@ def request_validation_error(
     _request: Request, _error: RequestValidationError
 ) -> JSONResponse:
     return error_response(422, "INVALID_REQUEST", "Invalid request.")
+
+
+@app.exception_handler(404)
+def not_found(_request: Request, _error: HTTPException) -> JSONResponse:
+    return error_response(404, "NOT_FOUND", "Resource not found.")
+
+
+@app.exception_handler(405)
+def method_not_allowed(_request: Request, e: HTTPException) -> JSONResponse:
+    return error_response(
+        405, "METHOD_NOT_ALLOWED", "Method not allowed.", headers=e.headers
+    )
 
 
 @app.exception_handler(Exception)
