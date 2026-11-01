@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,13 @@ class CreateMember(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     display_name: str = Field(min_length=1)
+
+    @field_validator("display_name")
+    @classmethod
+    def name_contains_no_nul(cls, value: str) -> str:
+        if "\x00" in value:
+            raise ValueError("Names must not contain NUL characters")
+        return value
 
 
 class MemberResponse(BaseModel):

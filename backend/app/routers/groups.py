@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,13 @@ class CreateGroup(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     name: str = Field(min_length=1)
+
+    @field_validator("name")
+    @classmethod
+    def name_contains_no_nul(cls, value: str) -> str:
+        if "\x00" in value:
+            raise ValueError("Names must not contain NUL characters")
+        return value
 
 
 @router.get("/groups")

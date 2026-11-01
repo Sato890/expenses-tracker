@@ -130,6 +130,18 @@ def test_lists_empty_expense_history_for_existing_group(client: TestClient) -> N
     assert response.json() == {"items": [], "limit": 50, "offset": 0}
 
 
+@pytest.mark.usefixtures("prepared_expense_group")
+def test_accepts_maximum_expense_history_offset(client: TestClient) -> None:
+    response = client.get(f"/groups/{GROUP_ID}/transactions?offset=9223372036854775807")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [],
+        "limit": 50,
+        "offset": 9223372036854775807,
+    }
+
+
 def test_rejects_expense_history_for_missing_group(client: TestClient) -> None:
     response = client.get("/groups/missing/transactions")
 
@@ -139,7 +151,10 @@ def test_rejects_expense_history_for_missing_group(client: TestClient) -> None:
     }
 
 
-@pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1", "limit=abc"])
+@pytest.mark.parametrize(
+    "query",
+    ["limit=0", "limit=101", "offset=-1", "offset=9223372036854775808", "limit=abc"],
+)
 def test_rejects_invalid_expense_history_pagination(
     client: TestClient, query: str
 ) -> None:

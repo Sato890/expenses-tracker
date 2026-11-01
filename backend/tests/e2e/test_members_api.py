@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
@@ -55,12 +56,12 @@ def test_creates_member_in_group(schema_engine: Engine, client: TestClient) -> N
         session.execute(groups.insert().values(id="group-1", name="Home"))
         session.commit()
 
-    response = client.post("/groups/group-1/members", json={"display_name": "  Alex  "})
+    response = client.post("/groups/group-1/members", json={"display_name": "  Aléx  "})
 
     assert response.status_code == 201
     member = response.json()
     assert member["id"]
-    assert member["display_name"] == "Alex"
+    assert member["display_name"] == "Aléx"
 
     with Session(schema_engine) as session:
         saved = session.execute(
@@ -71,18 +72,27 @@ def test_creates_member_in_group(schema_engine: Engine, client: TestClient) -> N
         assert (saved.group_id, saved.id, saved.name) == (
             "group-1",
             member["id"],
-            "Alex",
+            "Aléx",
         )
 
 
-def test_rejects_invalid_member_name(schema_engine: Engine, client: TestClient) -> None:
+@pytest.mark.parametrize("name", ["  ", "bad\x00name"])
+def test_rejects_invalid_member_name(
+    schema_engine: Engine, client: TestClient, name: str
+) -> None:
     with Session(schema_engine) as session:
         session.execute(groups.insert().values(id="group-1", name="Home"))
         session.commit()
 
-    response = client.post("/groups/group-1/members", json={"display_name": "  "})
+    response = client.post("/groups/group-1/members", json={"display_name": name})
 
     assert response.status_code == 422
+    assert response.json() == {
+        "error": {"code": "INVALID_REQUEST", "message": "Invalid request."}
+    }
+
+    with Session(schema_engine) as session:
+        assert session.scalars(select(members.c.id)).all() == []
 
 
 def test_rejects_unknown_member_field(

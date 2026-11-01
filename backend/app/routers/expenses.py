@@ -113,7 +113,7 @@ def list_expenses(
     group_id: str,
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=9223372036854775807)] = 0,
 ) -> ExpenseHistoryResponse | JSONResponse:
     try:
         items = list_group_expenses(
