@@ -12,6 +12,7 @@ from app.adapters.repository import (
     SqlAlchemyCategoryRepository,
     SqlAlchemyGroupRepository,
 )
+from app.domain.allocation import Allocation, allocate_equally
 from app.domain.group import Group
 from app.domain.identity import Member
 from app.domain.money import Money
@@ -71,53 +72,54 @@ def test_equal_expense_survives_a_fresh_session(schema_engine: Engine) -> None:
 def test_settlement_amounts_use_complete_persisted_group_history(
     schema_engine: Engine,
 ) -> None:
+    alex, bea, cam = [Member(name, name) for name in ("alex", "bea", "cam")]
+    household = Group("household", "Household", _members=[alex, bea, cam])
+    other = Group(
+        "other", "Other", _members=[Member("alex", "Alex"), Member("bea", "Bea")]
+    )
     category = Category("Groceries")
-    category_id = category.id
-    with Session(schema_engine) as session:
-        session.add_all(
-            [
-                Group(
-                    "household",
-                    "Household",
-                    _members=[
-                        Member("alex", "Alex"),
-                        Member("bea", "Bea"),
-                        Member("cam", "Cam"),
-                    ],
-                ),
-                Group("other", "Other", _members=[Member("dan", "Dan")]),
-                Group("empty", "Empty"),
+    for index in range(51):
+        amount = Money(Decimal("6.006" if index == 0 else "2.002"), "EUR")
+        household.add_expense(
+            Expense(
+                f"expense-{index}",
+                amount,
+                alex,
+                date(2026, 10, 31) if index == 0 else date(2026, 11, 1),
                 category,
-            ]
-        )
-        session.commit()
-
-    with Session(schema_engine) as session:
-        for amount in ("10.005", "2.001"):
-            create_equal_expense(
-                "household",
-                Money(Decimal(amount), "EUR"),
-                "alex",
-                date(2026, 10, 31),
-                category_id,
-                ["alex", "bea"],
-                SqlAlchemyGroupRepository(session),
-                SqlAlchemyCategoryRepository(session),
-                session,
+                allocate_equally(amount, [alex, bea]),
             )
+        )
+    other_amount = Money(Decimal("20"), "EUR")
+    other.add_expense(
+        Expense(
+            "other-expense",
+            other_amount,
+            other.members[0],
+            date(2026, 11, 1),
+            category,
+            Allocation(other.members[1], other_amount),
+        )
+    )
+    with Session(schema_engine) as session:
+        session.add_all([household, other, Group("empty", "Empty"), category])
+        session.commit()
 
     with Session(schema_engine) as session:
         groups = SqlAlchemyGroupRepository(session)
         amounts = get_group_settlement_amounts("household", groups)
         assert {member.id: amount for member, amount in amounts.items()} == {
-            "alex": Money(Decimal("6.003"), "EUR"),
-            "bea": Money(Decimal("-6.003"), "EUR"),
+            "alex": Money(Decimal("53.053"), "EUR"),
+            "bea": Money(Decimal("-53.053"), "EUR"),
             "cam": Money(Decimal("0"), "EUR"),
         }
         assert {
             member.id: amount
             for member, amount in get_group_settlement_amounts("other", groups).items()
-        } == {"dan": Money(Decimal("0"), "EUR")}
+        } == {
+            "alex": Money(Decimal("20"), "EUR"),
+            "bea": Money(Decimal("-20"), "EUR"),
+        }
         assert get_group_settlement_amounts("empty", groups) == {}
         with pytest.raises(GroupNotFoundError):
             get_group_settlement_amounts("missing", groups)
