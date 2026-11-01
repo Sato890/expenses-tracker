@@ -63,3 +63,28 @@ Run lint and format checks:
 uv run ruff check .
 uv run ruff format --check --diff .
 ```
+
+## Android Development
+
+The `android/` directory contains the Kotlin and Jetpack Compose starter app.
+Open this directory in Android Studio and let Gradle sync complete. The current
+app displays the template greeting; API connectivity and financial screens are
+not implemented yet.
+
+The project uses Gradle 9.4.1, Android Gradle Plugin 9.2.1, Kotlin Compose plugin
+2.2.10, and a Java 21 Gradle daemon. Install Android SDK Platform 36.1 through
+SDK Manager. Minimum supported Android version is Android 7.0 (API 24).
+Keep `local.properties` and local SDK paths out of version control.
+
+From `android/`, run the Windows checks with a valid JDK configured in `JAVA_HOME`:
+
+```powershell
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+```
+
+On macOS or Linux, use `bash ./gradlew` with the same tasks.
+The generated tests are template smoke checks, not financial behavior tests.
+
+To run on a physical phone, enable USB debugging, connect a USB data cable,
+approve the debugging prompt, select the phone in Android Studio, and click Run.
+A physical-phone launch has been verified during initial setup.
