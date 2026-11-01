@@ -54,3 +54,6 @@ def test_rejects_invalid_group_name(client: TestClient) -> None:
     response = client.post("/groups", json={"name": "  "})
 
     assert response.status_code == 422
+    assert response.json() == {
+        "error": {"code": "INVALID_REQUEST", "message": "Invalid request."}
+    }

@@ -1,20 +1,28 @@
+import re
 from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, ConfigDict
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.adapters.repository import (
     SqlAlchemyCategoryRepository,
     SqlAlchemyGroupRepository,
 )
+from app.api_errors import error_response
 from app.database import get_session
 from app.domain.money import Money
 from app.domain.transaction import Expense
-from app.services import create_equal_expense
+from app.services import (
+    GroupNotFoundError,
+    InvalidCategoryError,
+    InvalidParticipantError,
+    create_equal_expense,
+)
 
 router = APIRouter()
 
@@ -30,11 +38,28 @@ class CreateExpenseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["expense"]
-    amount: str
+    amount: str = Field(max_length=18, pattern=r"^[0-9]+(?:\.[0-9]+)?$")
     payer_id: str
     date: date
     category_id: UUID
     split: EqualSplitRequest
+
+    @field_validator("amount")
+    @classmethod
+    def amount_is_positive(cls, value: str) -> str:
+        if Decimal(value) <= 0:
+            raise ValueError("The expense amount must be positive")
+        return value
+
+    @field_validator("date", mode="before")
+    @classmethod
+    def date_uses_iso_format(cls, value: object) -> object:
+        if (
+            not isinstance(value, str)
+            or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value) is None
+        ):
+            raise ValueError("The date must use YYYY-MM-DD")
+        return value
 
 
 class AllocationResponse(BaseModel):
@@ -83,16 +108,30 @@ def create_expense(
     group_id: str,
     request: CreateExpenseRequest,
     session: Annotated[Session, Depends(get_session)],
-) -> ExpenseResponse:
-    expense = create_equal_expense(
-        group_id,
-        Money(Decimal(request.amount), "EUR"),
-        request.payer_id,
-        request.date,
-        request.category_id,
-        request.split.receiver_ids,
-        SqlAlchemyGroupRepository(session),
-        SqlAlchemyCategoryRepository(session),
-        session,
-    )
+) -> ExpenseResponse | JSONResponse:
+    try:
+        expense = create_equal_expense(
+            group_id,
+            Money(Decimal(request.amount), "EUR"),
+            request.payer_id,
+            request.date,
+            request.category_id,
+            request.split.receiver_ids,
+            SqlAlchemyGroupRepository(session),
+            SqlAlchemyCategoryRepository(session),
+            session,
+        )
+    except GroupNotFoundError:
+        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+    except InvalidCategoryError:
+        return error_response(422, "INVALID_CATEGORY", "Invalid category.")
+    except InvalidParticipantError:
+        return error_response(
+            422,
+            "INVALID_PARTICIPANT",
+            "A selected participant does not belong to this group.",
+        )
+    except ValueError:
+        return error_response(422, "INVALID_REQUEST", "Invalid request.")
+
     return expense_response(group_id, expense)
