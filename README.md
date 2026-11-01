@@ -18,12 +18,11 @@ A personal expense tracking app for individuals, households, and shared groups, 
 
 ### Local PostgreSQL
 
-Copy `.env.example` to `.env`. It defines `DATABASE_URL` for development and `TEST_DATABASE_URL` for automated tests.
+From the repository root, copy `.env.example` to `.env`. It defines `DATABASE_URL` for development and `TEST_DATABASE_URL` for automated tests.
 
 Start both PostgreSQL services:
 
 ```bash
-
 docker compose up -d
 ```
 
@@ -34,8 +33,16 @@ Run backend commands from the `backend/` directory.
 Install dependencies:
 
 ```bash
-uv sync
+uv sync --locked --dev
 ```
+
+Create the database schema, then seed development data:
+```bash
++uv run alembic upgrade head 
+uv run python -m app.adapters.seed
+```
+
+The repeatable seed adds the development group, participants, and built-in category catalog without duplicating seed data or replacing existing rows.
 
 Start the development server:
 
