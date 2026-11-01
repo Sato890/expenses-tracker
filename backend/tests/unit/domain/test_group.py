@@ -1,9 +1,9 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Context, Decimal, localcontext
 
 import pytest
 
-from app.domain.allocation import Allocation
+from app.domain.allocation import Allocation, allocate_equally
 from app.domain.debt import Debt
 from app.domain.group import Group
 from app.domain.identity import Member, User
@@ -539,3 +539,38 @@ def test_settlement_changes_debts_without_changing_spending() -> None:
         member_b: Money(Decimal("-6.0025"), "EUR"),
     }
     assert sum(amount.amount for amount in amounts.values()) == 0
+
+
+@pytest.mark.parametrize("reverse_transactions", [False, True])
+def test_preserves_exact_accumulated_settlement_amounts_in_any_transaction_order(
+    reverse_transactions: bool,
+) -> None:
+    member_a, member_b, member_c = [Member(name, name) for name in ("a", "b", "c")]
+    group = Group("group", "Group", _members=[member_a, member_b, member_c])
+    expenses = [
+        create_expense(member_a, member_b, "999999999999999999", str(index))
+        for index in range(11)
+    ]
+    amount = Money(Decimal("1"), "EUR")
+    expenses.append(
+        Expense(
+            "small",
+            amount,
+            member_a,
+            date(2026, 10, 31),
+            Category("Other"),
+            allocate_equally(amount, [member_a, member_b, member_c]),
+        )
+    )
+    for expense in reversed(expenses) if reverse_transactions else expenses:
+        group.add_expense(expense)
+
+    amounts = group.calculate_member_settlement_amounts()
+
+    assert amounts == {
+        member_a: Money(Decimal("10999999999999999989.666666666666666666"), "EUR"),
+        member_b: Money(Decimal("-10999999999999999989.333333333333333333"), "EUR"),
+        member_c: Money(Decimal("-0.333333333333333333"), "EUR"),
+    }
+    with localcontext(Context(prec=60)):
+        assert sum(value.amount for value in amounts.values()) == Decimal("0")
