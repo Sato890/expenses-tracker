@@ -38,7 +38,7 @@ uv sync --locked --dev
 
 Create the database schema, then seed development data:
 ```bash
-+uv run alembic upgrade head 
+uv run alembic upgrade head 
 uv run python -m app.adapters.seed
 ```
 
