@@ -4,7 +4,11 @@ from datetime import date
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from app.adapters.repository import AbstractCategoryRepository, AbstractGroupRepository
+from app.adapters.repository import (
+    AbstractCategoryRepository,
+    AbstractExpenseRepository,
+    AbstractGroupRepository,
+)
 from app.domain.allocation import allocate_equally
 from app.domain.money import Money
 from app.domain.transaction import Expense
@@ -26,6 +30,18 @@ class InvalidCategoryError(ValueError):
 
 class InvalidParticipantError(ValueError):
     pass
+
+
+def list_group_expenses(
+    group_id: str,
+    limit: int,
+    offset: int,
+    groups: AbstractGroupRepository,
+    expenses: AbstractExpenseRepository,
+) -> list[Expense]:
+    if not groups.exists(group_id):
+        raise GroupNotFoundError(group_id)
+    return expenses.list_by_group_id(group_id, limit, offset)
 
 
 def create_equal_expense(

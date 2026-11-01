@@ -4,13 +4,14 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.adapters.repository import (
     SqlAlchemyCategoryRepository,
+    SqlAlchemyExpenseRepository,
     SqlAlchemyGroupRepository,
 )
 from app.api_errors import error_response
@@ -22,6 +23,7 @@ from app.services import (
     InvalidCategoryError,
     InvalidParticipantError,
     create_equal_expense,
+    list_group_expenses,
 )
 
 router = APIRouter()
@@ -79,6 +81,12 @@ class ExpenseResponse(BaseModel):
     allocations: list[AllocationResponse]
 
 
+class ExpenseHistoryResponse(BaseModel):
+    items: list[ExpenseResponse]
+    limit: int
+    offset: int
+
+
 def expense_response(group_id: str, expense: Expense) -> ExpenseResponse:
     return ExpenseResponse(
         id=expense.expense_id,
@@ -96,6 +104,30 @@ def expense_response(group_id: str, expense: Expense) -> ExpenseResponse:
             )
             for allocation in expense.allocations
         ],
+    )
+
+
+@router.get("/groups/{group_id}/transactions", response_model=ExpenseHistoryResponse)
+def list_expenses(
+    group_id: str,
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ExpenseHistoryResponse | JSONResponse:
+    try:
+        items = list_group_expenses(
+            group_id,
+            limit,
+            offset,
+            SqlAlchemyGroupRepository(session),
+            SqlAlchemyExpenseRepository(session),
+        )
+    except GroupNotFoundError:
+        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+    return ExpenseHistoryResponse(
+        items=[expense_response(group_id, expense) for expense in items],
+        limit=limit,
+        offset=offset,
     )
 
 

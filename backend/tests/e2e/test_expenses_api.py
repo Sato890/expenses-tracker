@@ -85,6 +85,73 @@ def test_creates_equal_expense_with_full_precision_and_persists_allocations(
 
 
 @pytest.mark.usefixtures("prepared_expense_group")
+def test_lists_only_group_expenses_in_date_and_id_order_with_pagination(
+    schema_engine: Engine, client: TestClient
+) -> None:
+    created = []
+    for expense_date in ("2026-10-31", "2026-11-01", "2026-11-01"):
+        payload = expense_request()
+        payload["date"] = expense_date
+        response = client.post(f"/groups/{GROUP_ID}/transactions", json=payload)
+        assert response.status_code == 201
+        created.append(response.json())
+
+    with Session(schema_engine) as session:
+        session.execute(groups.insert().values(id="other", name="Other"))
+        session.execute(
+            members.insert().values(group_id="other", id="alex", name="Alex")
+        )
+        session.commit()
+    other_payload = expense_request()
+    other_payload["split"] = {"type": "equal", "receiver_ids": ["alex"]}
+    assert (
+        client.post("/groups/other/transactions", json=other_payload).status_code == 201
+    )
+
+    expected = sorted(
+        created, key=lambda item: (item["date"], item["id"]), reverse=True
+    )
+    response = client.get(f"/groups/{GROUP_ID}/transactions?limit=2&offset=1")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": expected[1:3], "limit": 2, "offset": 1}
+    assert client.get(f"/groups/{GROUP_ID}/transactions?offset=3").json() == {
+        "items": [],
+        "limit": 50,
+        "offset": 3,
+    }
+
+
+@pytest.mark.usefixtures("prepared_expense_group")
+def test_lists_empty_expense_history_for_existing_group(client: TestClient) -> None:
+    response = client.get(f"/groups/{GROUP_ID}/transactions")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "limit": 50, "offset": 0}
+
+
+def test_rejects_expense_history_for_missing_group(client: TestClient) -> None:
+    response = client.get("/groups/missing/transactions")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {"code": "GROUP_NOT_FOUND", "message": "Group not found."}
+    }
+
+
+@pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1", "limit=abc"])
+def test_rejects_invalid_expense_history_pagination(
+    client: TestClient, query: str
+) -> None:
+    response = client.get(f"/groups/{GROUP_ID}/transactions?{query}")
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": {"code": "INVALID_REQUEST", "message": "Invalid request."}
+    }
+
+
+@pytest.mark.usefixtures("prepared_expense_group")
 @pytest.mark.parametrize(
     ("field", "value"),
     [
