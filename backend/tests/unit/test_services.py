@@ -11,6 +11,7 @@ from app.domain.transaction import Category
 from app.services import (
     GroupNotFoundError,
     InvalidCategoryError,
+    InvalidExpenseRequestError,
     InvalidParticipantError,
     create_equal_expense,
 )
@@ -124,3 +125,53 @@ def test_create_equal_expense_rejects_invalid_context_without_committing(
 
     assert group.transactions == ()
     assert (session.commits, session.rollbacks) == (0, 1)
+
+
+def test_rejects_equal_expense_below_one_allocation_unit_per_receiver() -> None:
+    members = [Member(str(index), str(index)) for index in range(101)]
+    group = Group("household", "Household", _members=members)
+    category = Category("Groceries")
+    session = FakeSession()
+
+    with pytest.raises(
+        InvalidExpenseRequestError,
+        match="The expense amount must provide at least one allocation unit per receiver",
+    ):
+        create_equal_expense(
+            group.id,
+            Money(Decimal("0.0000000000000001"), "EUR"),
+            members[0].id,
+            date(2026, 10, 31),
+            category.id,
+            [member.id for member in members],
+            FakeGroups(group),
+            FakeCategories(category),
+            session,
+        )
+
+    assert group.transactions == ()
+    assert (session.commits, session.rollbacks) == (0, 1)
+
+
+def test_accepts_equal_expense_at_one_allocation_unit_per_receiver() -> None:
+    members = [Member(str(index), str(index)) for index in range(100)]
+    group = Group("household", "Household", _members=members)
+    category = Category("Groceries")
+    session = FakeSession()
+    amount = Money(Decimal("0.0000000000000001"), "EUR")
+
+    expense = create_equal_expense(
+        group.id,
+        amount,
+        members[0].id,
+        date(2026, 10, 31),
+        category.id,
+        [member.id for member in members],
+        FakeGroups(group),
+        FakeCategories(category),
+        session,
+    )
+
+    assert [allocation.share for allocation in expense.allocations] == [
+        Money(Decimal("1e-18"), "EUR")
+    ] * 100
