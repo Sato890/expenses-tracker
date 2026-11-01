@@ -107,6 +107,28 @@ def test_rejects_expense_for_non_member_receiver() -> None:
     assert group.transactions == ()
 
 
+def test_rejects_duplicate_allocation_receivers_without_adding_expense() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+    group = Group("group", "Group", _members=[payer, receiver])
+    expense = Expense(
+        "expense",
+        Money(Decimal("5"), "EUR"),
+        payer,
+        date.today(),
+        Category("Other"),
+        [
+            Allocation(receiver, Money(Decimal("2"), "EUR")),
+            Allocation(receiver, Money(Decimal("3"), "EUR")),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Allocation receivers must be unique"):
+        group.add_expense(expense)
+
+    assert group.transactions == ()
+
+
 @pytest.mark.parametrize("other_group_role", ["payer", "receiver"])
 def test_rejects_expense_member_from_another_group_with_the_same_id(
     other_group_role: str,

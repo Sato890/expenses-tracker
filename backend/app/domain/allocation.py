@@ -57,9 +57,13 @@ def validate_exact_allocations(
     if not allocations:
         raise ValueError("At least one allocation is required")
 
+    receiver_ids: set[str] = set()
     for allocation in allocations:
         if allocation.share.amount <= 0:
             raise ValueError("Allocation shares must be positive")
+        if allocation.receiver.id in receiver_ids:
+            raise ValueError("Allocation receivers must be unique")
+        receiver_ids.add(allocation.receiver.id)
 
     total = Money(Decimal("0"), expected_total.currency)
     for allocation in allocations:
