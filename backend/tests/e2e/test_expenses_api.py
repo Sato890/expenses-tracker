@@ -24,6 +24,7 @@ def prepared_expense_group(schema_engine: Engine) -> None:
             [
                 {"group_id": GROUP_ID, "id": "alex", "name": "Alex"},
                 {"group_id": GROUP_ID, "id": "bea", "name": "Bea"},
+                {"group_id": GROUP_ID, "id": "cam", "name": "Cam"},
             ],
         )
         session.execute(categories.insert().values(id=CATEGORY_ID, name="Groceries"))
@@ -42,29 +43,43 @@ def expense_request() -> dict[str, object]:
 
 
 @pytest.mark.usefixtures("prepared_expense_group")
-def test_creates_equal_expense_with_full_precision_and_persists_allocations(
+def test_preserves_residual_ownership_through_creation_and_persisted_history(
     schema_engine: Engine, client: TestClient
 ) -> None:
-    response = client.post(f"/groups/{GROUP_ID}/transactions", json=expense_request())
+    payload = expense_request()
+    payload["amount"] = "10"
+    payload["split"] = {"type": "equal", "receiver_ids": ["bea", "alex", "cam"]}
+    response = client.post(f"/groups/{GROUP_ID}/transactions", json=payload)
 
     assert response.status_code == 201
     body = response.json()
-    assert body == {
-        "id": body["id"],
-        "group_id": GROUP_ID,
-        "type": "expense",
-        "amount": "10.005",
-        "currency": "EUR",
-        "payer_id": "alex",
-        "date": "2026-11-01",
-        "category_id": str(CATEGORY_ID),
-        "allocations": [
-            {"receiver_id": "alex", "amount": "5.002500000000000000"},
-            {"receiver_id": "bea", "amount": "5.002500000000000000"},
-        ],
-    }
     assert body["id"]
     assert "location" not in response.headers
+
+    history = client.get(f"/groups/{GROUP_ID}/transactions")
+    assert history.status_code == 200
+    assert len(history.json()["items"]) == 1
+    for expense in (body, history.json()["items"][0]):
+        assert isinstance(expense["amount"], str)
+        expense["amount"] = Decimal(expense["amount"])
+        for allocation in expense["allocations"]:
+            assert isinstance(allocation["amount"], str)
+            allocation["amount"] = Decimal(allocation["amount"])
+        assert expense == {
+            "id": body["id"],
+            "group_id": GROUP_ID,
+            "type": "expense",
+            "amount": Decimal("10"),
+            "currency": "EUR",
+            "payer_id": "alex",
+            "date": "2026-11-01",
+            "category_id": str(CATEGORY_ID),
+            "allocations": [
+                {"receiver_id": "alex", "amount": Decimal("3.333333333333333333")},
+                {"receiver_id": "bea", "amount": Decimal("3.333333333333333334")},
+                {"receiver_id": "cam", "amount": Decimal("3.333333333333333333")},
+            ],
+        }
 
     with Session(schema_engine) as session:
         saved = session.execute(
@@ -80,8 +95,12 @@ def test_creates_equal_expense_with_full_precision_and_persists_allocations(
             )
             .order_by(allocations.c.receiver_id)
         ).all()
-    assert saved == (Decimal("10.005"), date(2026, 11, 1))
-    assert saved_shares == [("alex", Decimal("5.0025")), ("bea", Decimal("5.0025"))]
+    assert saved == (Decimal("10"), date(2026, 11, 1))
+    assert saved_shares == [
+        ("alex", Decimal("3.333333333333333333")),
+        ("bea", Decimal("3.333333333333333334")),
+        ("cam", Decimal("3.333333333333333333")),
+    ]
 
 
 @pytest.mark.usefixtures("prepared_expense_group")
