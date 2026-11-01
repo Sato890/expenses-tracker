@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -44,13 +45,17 @@ def test_reads_persisted_settlement_amounts_after_expense_and_history(
 
     amounts = client.get("/groups/household/settlement-amounts")
     assert amounts.status_code == 200
-    assert amounts.json() == {
+    body = amounts.json()
+    for item in body["items"]:
+        assert isinstance(item["amount"], str)
+        item["amount"] = Decimal(item["amount"])
+    assert body == {
         "group_id": "household",
         "currency": "EUR",
         "items": [
-            {"member_id": "alex", "amount": "5.002500000000000000"},
-            {"member_id": "bea", "amount": "-5.002500000000000000"},
-            {"member_id": "cam", "amount": "0"},
+            {"member_id": "alex", "amount": Decimal("5.0025")},
+            {"member_id": "bea", "amount": Decimal("-5.0025")},
+            {"member_id": "cam", "amount": Decimal("0")},
         ],
     }
 

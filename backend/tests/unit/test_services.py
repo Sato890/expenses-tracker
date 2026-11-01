@@ -38,12 +38,15 @@ class FakeCategories:
 
 
 class FakeSession:
-    def __init__(self) -> None:
+    def __init__(self, commit_error: Exception | None = None) -> None:
         self.commits = 0
         self.rollbacks = 0
+        self.commit_error = commit_error
 
     def commit(self) -> None:
         self.commits += 1
+        if self.commit_error is not None:
+            raise self.commit_error
 
     def rollback(self) -> None:
         self.rollbacks += 1
@@ -175,3 +178,26 @@ def test_accepts_equal_expense_at_one_allocation_unit_per_receiver() -> None:
     assert [allocation.share for allocation in expense.allocations] == [
         Money(Decimal("1e-18"), "EUR")
     ] * 100
+
+
+def test_rolls_back_and_propagates_the_original_commit_error() -> None:
+    group = Group("household", "Household", _members=[Member("alex", "Alex")])
+    category = Category("Groceries")
+    commit_error = RuntimeError("Commit failed")
+    session = FakeSession(commit_error)
+
+    with pytest.raises(RuntimeError) as e:
+        create_equal_expense(
+            group.id,
+            Money(Decimal("10"), "EUR"),
+            "alex",
+            date(2026, 10, 31),
+            category.id,
+            ["alex"],
+            FakeGroups(group),
+            FakeCategories(category),
+            session,
+        )
+
+    assert e.value is commit_error
+    assert (session.commits, session.rollbacks) == (1, 1)
