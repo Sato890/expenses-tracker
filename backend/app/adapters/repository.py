@@ -1,5 +1,3 @@
-"""Persistence access for groups and categories; callers own the transaction."""
-
 from abc import ABC, abstractmethod
 from uuid import UUID
 
