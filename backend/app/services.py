@@ -9,7 +9,7 @@ from app.adapters.repository import (
     AbstractExpenseRepository,
     AbstractGroupRepository,
 )
-from app.domain.allocation import allocate_equally
+from app.domain.allocation import ALLOCATION_UNIT, allocate_equally
 from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Expense
@@ -90,6 +90,12 @@ def create_equal_expense(
             receiver_id not in members for receiver_id in receiver_ids
         ):
             raise InvalidParticipantError("A selected participant is not in the group")
+
+        minimum_total = Money(ALLOCATION_UNIT, amount.currency) * len(receiver_ids)
+        if amount < minimum_total:
+            raise InvalidExpenseRequestError(
+                "The expense amount must provide at least one allocation unit per receiver"
+            )
 
         expense = Expense(
             expense_id=uuid4().hex,
