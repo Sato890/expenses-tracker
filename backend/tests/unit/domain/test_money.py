@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Context, Decimal, localcontext
 
 import pytest
 
@@ -72,3 +72,38 @@ def test_rounds_money_down_to_the_requested_unit() -> None:
     result = money.round_down_to(Decimal("1e-18"))
 
     assert result == Money(Decimal("333333333333333332.666666666666666666"), "EUR")
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected_sum", "expected_difference"),
+    [
+        (
+            "10999999999999999989.333333333333333333",
+            "0.000000000000000001",
+            "10999999999999999989.333333333333333334",
+            "10999999999999999989.333333333333333332",
+        ),
+        (
+            "10999999999999999989.333333333333333333",
+            "10999999999999999989.333333333333333332",
+            "21999999999999999978.666666666666666665",
+            "0.000000000000000001",
+        ),
+        (
+            "99999999999999999999.999999999999999999",
+            "0.000000000000000001",
+            "100000000000000000000.000000000000000000",
+            "99999999999999999999.999999999999999998",
+        ),
+    ],
+)
+def test_adds_and_subtracts_exactly_independent_of_ambient_precision(
+    left: str, right: str, expected_sum: str, expected_difference: str
+) -> None:
+    value = Money(Decimal(left), "EUR")
+    other = Money(Decimal(right), "EUR")
+
+    with localcontext(Context(prec=3)) as context:
+        assert value + other == Money(Decimal(expected_sum), "EUR")
+        assert value - other == Money(Decimal(expected_difference), "EUR")
+        assert context.prec == 3
