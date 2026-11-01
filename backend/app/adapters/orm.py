@@ -14,6 +14,7 @@ from sqlalchemy import (
     Uuid,
     and_,
     event,
+    inspect,
 )
 from sqlalchemy.orm import composite, foreign, registry, relationship
 
@@ -127,6 +128,9 @@ def _initialize_unmapped_group_state(group: Group, _context: object) -> None:
 
 def start_mappers() -> None:
     """Map domain classes at the application or test boundary."""
+    if inspect(Group, raiseerr=False) is not None:
+        return
+
     mapper_registry.map_imperatively(
         Member,
         members,
