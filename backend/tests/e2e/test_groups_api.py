@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
@@ -36,24 +37,30 @@ def test_lists_no_groups(client: TestClient) -> None:
 
 
 def test_creates_group(schema_engine: Engine, client: TestClient) -> None:
-    response = client.post("/groups", json={"name": "  Home  "})
+    response = client.post("/groups", json={"name": "  Acasă!  "})
 
     assert response.status_code == 201
     group = response.json()
     assert group["id"]
-    assert group["name"] == "Home"
+    assert group["name"] == "Acasă!"
 
     with Session(schema_engine) as session:
         saved = session.execute(
             select(groups.c.id, groups.c.name).where(groups.c.id == group["id"])
         ).one()
-        assert (saved.id, saved.name) == (group["id"], "Home")
+        assert (saved.id, saved.name) == (group["id"], "Acasă!")
 
 
-def test_rejects_invalid_group_name(client: TestClient) -> None:
-    response = client.post("/groups", json={"name": "  "})
+@pytest.mark.parametrize("name", ["  ", "bad\x00name"])
+def test_rejects_invalid_group_name(
+    schema_engine: Engine, client: TestClient, name: str
+) -> None:
+    response = client.post("/groups", json={"name": name})
 
     assert response.status_code == 422
     assert response.json() == {
         "error": {"code": "INVALID_REQUEST", "message": "Invalid request."}
     }
+
+    with Session(schema_engine) as session:
+        assert session.scalars(select(groups.c.id)).all() == []
