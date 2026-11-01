@@ -10,6 +10,7 @@ from app.adapters.repository import (
     AbstractGroupRepository,
 )
 from app.domain.allocation import allocate_equally
+from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Expense
 
@@ -34,6 +35,15 @@ class InvalidParticipantError(ValueError):
 
 class InvalidExpenseRequestError(ValueError):
     pass
+
+
+def get_group_settlement_amounts(
+    group_id: str, groups: AbstractGroupRepository
+) -> dict[Member, Money]:
+    group = groups.get(group_id)
+    if group is None:
+        raise GroupNotFoundError(group_id)
+    return group.calculate_member_settlement_amounts()
 
 
 def list_group_expenses(
