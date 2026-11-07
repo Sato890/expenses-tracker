@@ -66,25 +66,31 @@ uv run ruff format --check --diff .
 
 ## Android Development
 
-The `android/` directory contains the Kotlin and Jetpack Compose starter app.
-Open this directory in Android Studio and let Gradle sync complete. The current
-app displays the template greeting; API connectivity and financial screens are
-not implemented yet.
+Open `android/` in Android Studio and let Gradle sync complete. Use Java 21
+and Android SDK 36.1. Keep `local.properties` and local SDK paths out of version control.
 
-The project uses Gradle 9.4.1, Android Gradle Plugin 9.2.1, Kotlin Compose plugin
-2.2.10, and a Java 21 Gradle daemon. Install Android SDK Platform 36.1 through
-SDK Manager. Minimum supported Android version is Android 7.0 (API 24).
-Keep `local.properties` and local SDK paths out of version control.
+The configured API base URL is `http://127.0.0.1:8000`, defined by the
+`API_BASE_URL` buildConfigField in `android/app/build.gradle.kts`. This slice
+targets local development; deployed backend configuration comes later.
+HTTP access is allowed only for `127.0.0.1` in debug builds.
 
-From `android/`, run the Windows checks with a valid JDK configured in `JAVA_HOME`:
+To run on a physical phone:
+
+1. Start FastAPI using the backend instructions above.
+2. Enable USB debugging on the phone, connect a USB data cable, and approve
+   the debugging prompt.
+3. Run `adb reverse tcp:8000 tcp:8000` on the PC. This forwards the phone's
+   port 8000 to the backend's port 8000 on the PC.
+4. Select the phone in Android Studio and click Run.
+
+The forwarding rule is not needed before every app launch. After reconnecting
+or restarting the device or ADB, check `adb reverse --list` and recreate the
+rule if it is missing.
+
+Run checks from `android/` with Java 21 configured in `JAVA_HOME`:
 
 ```powershell
 .\gradlew.bat assembleDebug testDebugUnitTest lintDebug
 ```
 
 On macOS or Linux, use `bash ./gradlew` with the same tasks.
-The generated tests are template smoke checks, not financial behavior tests.
-
-To run on a physical phone, enable USB debugging, connect a USB data cable,
-approve the debugging prompt, select the phone in Android Studio, and click Run.
-A physical-phone launch has been verified during initial setup.
