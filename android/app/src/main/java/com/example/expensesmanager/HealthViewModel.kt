@@ -10,7 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class HealthState { Connecting, Connected, Failed }
+enum class HealthState {
+    Connecting,
+    Connected,
+    Failed,
+}
 
 class HealthViewModel(
     private val checkHealth: suspend () -> Unit = {

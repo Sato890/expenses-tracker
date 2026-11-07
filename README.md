@@ -88,7 +88,9 @@ Local HTTP is allowed only in debug builds.
 Run checks from `android/`:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest lintDebug detekt
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug detekt ktlintCheck
 ```
 
 On macOS or Linux, use `bash ./gradlew` with the same tasks.
+
+Use `.\gradlew.bat ktlintFormat` to fix Kotlin formatting.

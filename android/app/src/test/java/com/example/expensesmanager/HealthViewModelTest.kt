@@ -19,10 +19,14 @@ class HealthViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
     @Before
-    fun setUp() { Dispatchers.setMain(dispatcher) }
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
 
     @After
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun successfulRequestShowsConnected() = runTest(dispatcher) {
@@ -49,7 +53,10 @@ class HealthViewModelTest {
     fun repeatedRetryDoesNotStartOverlappingRequests() = runTest(dispatcher) {
         val response = CompletableDeferred<Unit>()
         var calls = 0
-        val model = HealthViewModel { calls++; response.await() }
+        val model = HealthViewModel {
+            calls++
+            response.await()
+        }
         runCurrent()
         model.connect()
         runCurrent()
