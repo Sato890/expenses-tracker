@@ -21,4 +21,4 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - name: Build and check Android
         working-directory: android
-        run: bash ./gradlew assembleDebug testDebugUnitTest lintDebug
+        run: bash ./gradlew assembleDebug testDebugUnitTest lintDebug detekt

@@ -88,7 +88,7 @@ Local HTTP is allowed only in debug builds.
 Run checks from `android/`:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug detekt
 ```
 
 On macOS or Linux, use `bash ./gradlew` with the same tasks.

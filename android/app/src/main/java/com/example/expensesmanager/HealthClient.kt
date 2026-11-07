@@ -5,6 +5,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
 
+private const val REQUEST_TIMEOUT_MILLIS = 5000
+
 class HealthClient(
     baseUrl: String = BuildConfig.API_BASE_URL,
 ) {
@@ -14,8 +16,8 @@ class HealthClient(
         val connection = endpoint.openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "GET"
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
+            connection.connectTimeout = REQUEST_TIMEOUT_MILLIS
+            connection.readTimeout = REQUEST_TIMEOUT_MILLIS
             connection.instanceFollowRedirects = false
             if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                 throw IOException("Health request failed")

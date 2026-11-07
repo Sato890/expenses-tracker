@@ -26,6 +26,7 @@ class HealthViewModel(
         connect()
     }
 
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun connect() {
         if (requestInProgress) return
         requestInProgress = true
