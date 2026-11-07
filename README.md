@@ -66,28 +66,26 @@ uv run ruff format --check --diff .
 
 ## Android Development
 
-Open `android/` in Android Studio and let Gradle sync complete. Use Java 21
-and Android SDK 36.1. Keep `local.properties` and local SDK paths out of version control.
+Open `android/` in Android Studio. Install Android SDK 36.1 and use Java 21.
+For terminal commands, set `JAVA_HOME` to your Java installation.
 
-The configured API base URL is `http://127.0.0.1:8000`, defined by the
-`API_BASE_URL` buildConfigField in `android/app/build.gradle.kts`. This slice
-targets local development; deployed backend configuration comes later.
-HTTP access is allowed only for `127.0.0.1` in debug builds.
-
-To run on a physical phone:
+To run on your phone:
 
 1. Start FastAPI using the backend instructions above.
-2. Enable USB debugging on the phone, connect a USB data cable, and approve
-   the debugging prompt.
-3. Run `adb reverse tcp:8000 tcp:8000` on the PC. This forwards the phone's
-   port 8000 to the backend's port 8000 on the PC.
+2. Enable USB debugging, connect the phone, and approve the debugging prompt.
+3. Run `adb reverse tcp:8000 tcp:8000` on your computer.
 4. Select the phone in Android Studio and click Run.
 
-The forwarding rule is not needed before every app launch. After reconnecting
-or restarting the device or ADB, check `adb reverse --list` and recreate the
-rule if it is missing.
+`adb reverse tcp:8000 tcp:8000` forwards connections from port 8000 on your
+phone to port 8000 on your computer. This lets the app reach your local FastAPI
+backend through `http://127.0.0.1:8000`.
 
-Run checks from `android/` with Java 21 configured in `JAVA_HOME`:
+You don't need to run it before every launch. After reconnecting or restarting
+the phone, check `adb reverse --list` and recreate the rule if it's missing.
+
+Local HTTP is allowed only in debug builds.
+
+Run checks from `android/`:
 
 ```powershell
 .\gradlew.bat assembleDebug testDebugUnitTest lintDebug

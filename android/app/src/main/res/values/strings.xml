@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Expenses Manager</string>
+    <string name="health_connecting">Connecting…</string>
+    <string name="health_connected">Connected</string>
+    <string name="health_failed">Couldn’t connect</string>
+    <string name="health_retry">Retry</string>
 </resources>
