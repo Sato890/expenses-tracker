@@ -66,25 +66,26 @@ uv run ruff format --check --diff .
 
 ## Android Development
 
-The `android/` directory contains the Kotlin and Jetpack Compose starter app.
-Open this directory in Android Studio and let Gradle sync complete. The current
-app displays the template greeting; API connectivity and financial screens are
-not implemented yet.
+Open `android/` in Android Studio. Install Android SDK 36.1 and use Java 21.
+For terminal commands, set `JAVA_HOME` to your Java installation.
 
-The project uses Gradle 9.4.1, Android Gradle Plugin 9.2.1, Kotlin Compose plugin
-2.2.10, and a Java 21 Gradle daemon. Install Android SDK Platform 36.1 through
-SDK Manager. Minimum supported Android version is Android 7.0 (API 24).
-Keep `local.properties` and local SDK paths out of version control.
+To run on your phone:
 
-From `android/`, run the Windows checks with a valid JDK configured in `JAVA_HOME`:
+1. Start FastAPI using the backend instructions above.
+2. Enable USB debugging, connect the phone, and approve the debugging prompt.
+3. Run `adb reverse tcp:8000 tcp:8000` on your computer.
+4. Select the phone in Android Studio and click Run.
+
+`adb reverse tcp:8000 tcp:8000` forwards connections from port 8000 on your
+phone to port 8000 on your computer. This lets the app reach your local FastAPI
+backend through `http://127.0.0.1:8000`.
+
+Run checks from `android/`:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug detekt ktlintCheck
 ```
 
 On macOS or Linux, use `bash ./gradlew` with the same tasks.
-The generated tests are template smoke checks, not financial behavior tests.
 
-To run on a physical phone, enable USB debugging, connect a USB data cable,
-approve the debugging prompt, select the phone in Android Studio, and click Run.
-A physical-phone launch has been verified during initial setup.
+Use `.\gradlew.bat ktlintFormat` to fix Kotlin formatting.
