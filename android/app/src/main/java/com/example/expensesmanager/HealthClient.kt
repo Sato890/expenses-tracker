@@ -7,9 +7,7 @@ import org.json.JSONObject
 
 private const val REQUEST_TIMEOUT_MILLIS = 5000
 
-class HealthClient(
-    baseUrl: String = BuildConfig.API_BASE_URL,
-) {
+class HealthClient(baseUrl: String = BuildConfig.API_BASE_URL) {
     private val endpoint = URL("${baseUrl.trimEnd('/')}/health")
 
     fun check() {

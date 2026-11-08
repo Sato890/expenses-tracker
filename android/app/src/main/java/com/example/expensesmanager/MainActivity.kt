@@ -32,10 +32,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HealthScreen(
-    state: HealthState,
-    onRetry: () -> Unit,
-) {
+fun HealthScreen(state: HealthState, onRetry: () -> Unit) {
     val message = when (state) {
         HealthState.Connecting -> R.string.health_connecting
         HealthState.Connected -> R.string.health_connected
