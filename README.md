@@ -80,11 +80,6 @@ To run on your phone:
 phone to port 8000 on your computer. This lets the app reach your local FastAPI
 backend through `http://127.0.0.1:8000`.
 
-You don't need to run it before every launch. After reconnecting or restarting
-the phone, check `adb reverse --list` and recreate the rule if it's missing.
-
-Local HTTP is allowed only in debug builds.
-
 Run checks from `android/`:
 
 ```powershell
