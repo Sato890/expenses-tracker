@@ -14,6 +14,8 @@ from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Expense
 
+GROUP_TRANSACTION_LIMIT = 50_000
+
 
 class SessionLike(Protocol):
     def commit(self) -> None: ...
@@ -22,6 +24,10 @@ class SessionLike(Protocol):
 
 
 class GroupNotFoundError(LookupError):
+    pass
+
+
+class GroupTransactionLimitReachedError(ValueError):
     pass
 
 
@@ -35,6 +41,16 @@ class InvalidParticipantError(ValueError):
 
 class InvalidExpenseRequestError(ValueError):
     pass
+
+
+def ensure_group_transaction_capacity(
+    group_id: str, groups: AbstractGroupRepository
+) -> None:
+    count = groups.count_transactions_for_update(group_id)
+    if count is None:
+        raise GroupNotFoundError(group_id)
+    if count >= GROUP_TRANSACTION_LIMIT:
+        raise GroupTransactionLimitReachedError(group_id)
 
 
 def get_group_settlement_amounts(
@@ -70,6 +86,7 @@ def create_equal_expense(
     session: SessionLike,
 ) -> Expense:
     try:
+        ensure_group_transaction_capacity(group_id, groups)
         group = groups.get(group_id)
         if group is None:
             raise GroupNotFoundError(group_id)

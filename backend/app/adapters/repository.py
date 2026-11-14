@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.adapters.orm import expenses, groups
@@ -10,6 +10,10 @@ from app.domain.transaction import Category, Expense
 
 
 class AbstractGroupRepository(ABC):
+    @abstractmethod
+    def count_transactions_for_update(self, group_id: str) -> int | None:
+        raise NotImplementedError
+
     @abstractmethod
     def add(self, group: Group) -> None:
         raise NotImplementedError
@@ -29,6 +33,18 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
 
     def add(self, group: Group) -> None:
         self.session.add(group)
+
+    def count_transactions_for_update(self, group_id: str) -> int | None:
+        group = self.session.scalar(
+            select(groups.c.id).where(groups.c.id == group_id).with_for_update()
+        )
+        if group is None:
+            return None
+        return self.session.scalar(
+            select(func.count())
+            .select_from(expenses)
+            .where(expenses.c.group_id == group_id)
+        )
 
     def get(self, group_id: str) -> Group | None:
         return self.session.get(Group, group_id)
