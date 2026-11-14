@@ -26,6 +26,10 @@ class FakeGroups:
             self.group if self.group is not None and self.group.id == group_id else None
         )
 
+    def count_transactions_for_update(self, group_id: str) -> int | None:
+        group = self.get(group_id)
+        return len(group.transactions) if group is not None else None
+
 
 class FakeCategories:
     def __init__(self, category: Category | None) -> None:

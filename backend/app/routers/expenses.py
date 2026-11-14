@@ -20,6 +20,7 @@ from app.domain.money import Money
 from app.domain.transaction import Expense
 from app.services import (
     GroupNotFoundError,
+    GroupTransactionLimitReachedError,
     InvalidCategoryError,
     InvalidExpenseRequestError,
     InvalidParticipantError,
@@ -158,6 +159,12 @@ def create_expense(
         return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
     except InvalidCategoryError:
         return error_response(422, "INVALID_CATEGORY", "Invalid category.")
+    except GroupTransactionLimitReachedError:
+        return error_response(
+            409,
+            "GROUP_TRANSACTION_LIMIT_REACHED",
+            "This group has reached the limit of 50,000 transactions.",
+        )
     except InvalidParticipantError:
         return error_response(
             422,
