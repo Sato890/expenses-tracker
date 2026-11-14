@@ -7,7 +7,7 @@ import pytest
 from app.domain.group import Group
 from app.domain.identity import Member
 from app.domain.money import Money
-from app.domain.transaction import Category
+from app.domain.transaction import Category, Expense
 from app.services import (
     GroupNotFoundError,
     InvalidCategoryError,
@@ -29,6 +29,15 @@ class FakeGroups:
     def count_transactions_for_update(self, group_id: str) -> int | None:
         group = self.get(group_id)
         return len(group.transactions) if group is not None else None
+
+    def get_members_for_expense_creation(self, group_id: str) -> tuple[Member, ...]:
+        group = self.get(group_id)
+        return group.members if group is not None else ()
+
+    def add_expense(self, group_id: str, expense: Expense) -> None:
+        group = self.get(group_id)
+        assert group is not None
+        group.add_expense(expense)
 
 
 class FakeCategories:

@@ -28,6 +28,10 @@ class AbstractGroupRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def add_expense(self, group_id: str, expense: Expense) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def exists(self, group_id: str) -> bool:
         raise NotImplementedError
 
@@ -62,6 +66,10 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
                 .order_by(members.c.id)
             )
         )
+
+    def add_expense(self, group_id: str, expense: Expense) -> None:
+        expense._group_id = group_id
+        self.session.add(expense)
 
     def exists(self, group_id: str) -> bool:
         return (

@@ -10,6 +10,7 @@ from app.adapters.repository import (
     AbstractGroupRepository,
 )
 from app.domain.allocation import ALLOCATION_UNIT, allocate_equally
+from app.domain.group import validate_expense_for_members
 from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Expense
@@ -87,9 +88,7 @@ def create_equal_expense(
 ) -> Expense:
     try:
         ensure_group_transaction_capacity(group_id, groups)
-        group = groups.get(group_id)
-        if group is None:
-            raise GroupNotFoundError(group_id)
+        group_members = groups.get_members_for_expense_creation(group_id)
 
         category = categories.get(category_id)
         if category is None:
@@ -102,7 +101,7 @@ def create_equal_expense(
         if len(receiver_ids) != len(set(receiver_ids)):
             raise InvalidExpenseRequestError("Receiver IDs must be unique")
 
-        members = {member.id: member for member in group.members}
+        members = {member.id: member for member in group_members}
         if payer_id not in members or any(
             receiver_id not in members for receiver_id in receiver_ids
         ):
@@ -124,7 +123,8 @@ def create_equal_expense(
                 amount, [members[receiver_id] for receiver_id in receiver_ids]
             ),
         )
-        group.add_expense(expense)
+        validate_expense_for_members(expense, group_members)
+        groups.add_expense(group_id, expense)
         session.commit()
         return expense
     except Exception:
