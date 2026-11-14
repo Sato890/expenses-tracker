@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, event
 from sqlalchemy.orm import Session
 
 from app.adapters.repository import (
@@ -90,6 +90,43 @@ def test_repository_can_reconstruct_group_with_expenses(
         expected_group.add_expense(expected_expense)
 
         assert loaded == expected_group
+
+
+def test_creation_member_read_does_not_load_group_expenses(
+    schema_engine: Engine,
+) -> None:
+    group = create_group()
+    group.add_expense(create_expense(group, Category("Other")))
+    with Session(schema_engine) as session:
+        session.add(group)
+        session.commit()
+
+    statements: list[str] = []
+
+    def record_statement(
+        _connection: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
+    ) -> None:
+        statements.append(statement)
+
+    event.listen(schema_engine, "before_cursor_execute", record_statement)
+    try:
+        with Session(schema_engine) as session:
+            members = SqlAlchemyGroupRepository(
+                session
+            ).get_members_for_expense_creation("group-1")
+            assert [member.id for member in members] == ["member-1", "member-2"]
+            assert not any(
+                isinstance(item, Expense) for item in session.identity_map.values()
+            )
+    finally:
+        event.remove(schema_engine, "before_cursor_execute", record_statement)
+
+    assert not any("FROM expenses" in statement for statement in statements)
 
 
 def test_keeps_expenses_within_their_group(

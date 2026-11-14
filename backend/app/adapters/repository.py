@@ -4,8 +4,9 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.adapters.orm import expenses, groups
+from app.adapters.orm import expenses, groups, members
 from app.domain.group import Group
+from app.domain.identity import Member
 from app.domain.transaction import Category, Expense
 
 
@@ -20,6 +21,10 @@ class AbstractGroupRepository(ABC):
 
     @abstractmethod
     def get(self, group_id: str) -> Group | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_members_for_expense_creation(self, group_id: str) -> tuple[Member, ...]:
         raise NotImplementedError
 
     @abstractmethod
@@ -48,6 +53,15 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
 
     def get(self, group_id: str) -> Group | None:
         return self.session.get(Group, group_id)
+
+    def get_members_for_expense_creation(self, group_id: str) -> tuple[Member, ...]:
+        return tuple(
+            self.session.scalars(
+                select(Member)
+                .where(members.c.group_id == group_id)
+                .order_by(members.c.id)
+            )
+        )
 
     def exists(self, group_id: str) -> bool:
         return (
