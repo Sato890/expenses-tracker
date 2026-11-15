@@ -1,5 +1,3 @@
-"""SQLAlchemy mappings kept outside the domain model."""
-
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -132,7 +130,6 @@ def _initialize_unmapped_group_state(group: Group, _context: object) -> None:
 
 
 def start_mappers() -> None:
-    """Map domain classes at the application or test boundary."""
     if inspect(Group, raiseerr=False) is not None:
         return
 

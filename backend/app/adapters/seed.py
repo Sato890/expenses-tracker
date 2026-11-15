@@ -1,5 +1,3 @@
-"""Repeatable development data for the local expense workflow."""
-
 from uuid import UUID
 
 from sqlalchemy import Connection
@@ -28,7 +26,6 @@ BUILT_IN_CATEGORIES = (
 
 
 def seed_development_data(connection: Connection) -> None:
-    """Insert missing development rows without replacing existing data."""
     connection.execute(
         insert(groups)
         .values(id="group-1", name="Household")
@@ -57,7 +54,6 @@ def seed_development_data(connection: Connection) -> None:
 
 
 def main() -> None:
-    """Seed the configured development database in one transaction."""
     with engine.begin() as connection:
         seed_development_data(connection)
 

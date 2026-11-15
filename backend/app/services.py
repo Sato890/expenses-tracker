@@ -1,5 +1,3 @@
-"""Application operations that coordinate domain behavior and persistence."""
-
 from datetime import date
 from typing import Protocol
 from uuid import UUID, uuid4
