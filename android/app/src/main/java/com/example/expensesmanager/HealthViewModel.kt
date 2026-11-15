@@ -18,7 +18,7 @@ enum class HealthState {
 
 class HealthViewModel(
     private val checkHealth: suspend () -> Unit = {
-        withContext(Dispatchers.IO) { HealthClient().check() }
+        withContext(Dispatchers.IO) { HealthClient().checkHealth() }
     },
 ) : ViewModel() {
     var state by mutableStateOf(HealthState.Connecting)
@@ -27,11 +27,11 @@ class HealthViewModel(
     private var requestInProgress = false
 
     init {
-        connect()
+        refreshHealthStatus()
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    fun connect() {
+    fun refreshHealthStatus() {
         if (requestInProgress) return
         requestInProgress = true
         state = HealthState.Connecting

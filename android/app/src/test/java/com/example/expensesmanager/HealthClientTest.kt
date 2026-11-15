@@ -23,15 +23,15 @@ class HealthClientTest {
         server.start()
         try {
             val client = HealthClient("http://127.0.0.1:${server.address.port}/api")
-            client.check()
-            HealthClient("http://127.0.0.1:${server.address.port}/api/").check()
+            client.checkHealth()
+            HealthClient("http://127.0.0.1:${server.address.port}/api/").checkHealth()
             body = "{\"status\":\"unhealthy\"}"
-            assertThrows(IOException::class.java) { client.check() }
+            assertThrows(IOException::class.java) { client.checkHealth() }
             body = "not JSON"
-            assertThrows(JSONException::class.java) { client.check() }
+            assertThrows(JSONException::class.java) { client.checkHealth() }
             status = 503
             body = "{\"status\":\"ok\"}"
-            assertThrows(IOException::class.java) { client.check() }
+            assertThrows(IOException::class.java) { client.checkHealth() }
         } finally {
             server.stop(0)
         }

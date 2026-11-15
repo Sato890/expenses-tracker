@@ -26,7 +26,7 @@ class Member:
     def get_settlement_balance(self) -> Money:
         return Money(self._settlement_balance_value, "EUR")
 
-    def adjust_settlement_balance(self, change: Money) -> None:
+    def update_settlement_balance(self, change: Money) -> None:
         self._settlement_balance_value = (self.get_settlement_balance() + change).amount
 
 

@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ExpensesManagerTheme {
-                HealthScreen(model.state, model::connect)
+                HealthScreen(model.state, model::refreshHealthStatus)
             }
         }
     }

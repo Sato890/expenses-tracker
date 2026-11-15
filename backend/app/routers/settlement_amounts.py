@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.adapters.repository import SqlAlchemyGroupRepository
-from app.api_errors import error_response
+from app.api_errors import build_error_response
 from app.database import get_session
 from app.domain.money import Money
 from app.services import GroupNotFoundError, get_group_settlement_amounts
@@ -42,7 +42,7 @@ def read_settlement_amounts(
             group_id, SqlAlchemyGroupRepository(session)
         )
     except GroupNotFoundError:
-        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+        return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
 
     return SettlementAmountsResponse(
         group_id=group_id,

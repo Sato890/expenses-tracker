@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from fastapi.responses import JSONResponse
 
 
-def error_response(
+def build_error_response(
     status_code: int,
     code: str,
     message: str,

@@ -43,7 +43,7 @@ class HealthViewModelTest {
         runCurrent()
         assertEquals(HealthState.Failed, model.state)
         fail = false
-        model.connect()
+        model.refreshHealthStatus()
         assertEquals(HealthState.Connecting, model.state)
         runCurrent()
         assertEquals(HealthState.Connected, model.state)
@@ -58,7 +58,7 @@ class HealthViewModelTest {
             response.await()
         }
         runCurrent()
-        model.connect()
+        model.refreshHealthStatus()
         runCurrent()
         assertEquals(1, calls)
         response.complete(Unit)

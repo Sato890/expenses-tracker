@@ -92,7 +92,7 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
 
     def add_expense(self, group_id: str, expense: Expense) -> None:
         for member, change in calculate_expense_balance_changes(expense).items():
-            member.adjust_settlement_balance(change)
+            member.update_settlement_balance(change)
         expense._group_id = group_id
         self.session.add(expense)
 

@@ -14,7 +14,7 @@ from app.adapters.repository import (
     SqlAlchemyExpenseRepository,
     SqlAlchemyGroupRepository,
 )
-from app.api_errors import error_response
+from app.api_errors import build_error_response
 from app.database import get_session
 from app.domain.money import Money
 from app.domain.transaction import Expense
@@ -89,7 +89,7 @@ class ExpenseHistoryResponse(BaseModel):
     offset: int
 
 
-def expense_response(group_id: str, expense: Expense) -> ExpenseResponse:
+def build_expense_response(group_id: str, expense: Expense) -> ExpenseResponse:
     return ExpenseResponse(
         id=expense.expense_id,
         group_id=group_id,
@@ -125,9 +125,9 @@ def list_expenses(
             SqlAlchemyExpenseRepository(session),
         )
     except GroupNotFoundError:
-        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+        return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
     return ExpenseHistoryResponse(
-        items=[expense_response(group_id, expense) for expense in items],
+        items=[build_expense_response(group_id, expense) for expense in items],
         limit=limit,
         offset=offset,
     )
@@ -156,22 +156,22 @@ def create_expense(
             session,
         )
     except GroupNotFoundError:
-        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+        return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
     except InvalidCategoryError:
-        return error_response(422, "INVALID_CATEGORY", "Invalid category.")
+        return build_error_response(422, "INVALID_CATEGORY", "Invalid category.")
     except GroupTransactionLimitReachedError:
-        return error_response(
+        return build_error_response(
             409,
             "GROUP_TRANSACTION_LIMIT_REACHED",
             "This group has reached the limit of 50,000 transactions.",
         )
     except InvalidParticipantError:
-        return error_response(
+        return build_error_response(
             422,
             "INVALID_PARTICIPANT",
             "A selected participant does not belong to this group.",
         )
     except InvalidExpenseRequestError:
-        return error_response(422, "INVALID_REQUEST", "Invalid request.")
+        return build_error_response(422, "INVALID_REQUEST", "Invalid request.")
 
-    return expense_response(group_id, expense)
+    return build_expense_response(group_id, expense)

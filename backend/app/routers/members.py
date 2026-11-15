@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.orm import groups, members
-from app.api_errors import error_response
+from app.api_errors import build_error_response
 from app.database import get_session
 
 router = APIRouter()
@@ -45,7 +45,7 @@ def list_members(
         select(groups.c.id).where(groups.c.id == group_id)
     ).scalar_one_or_none()
     if group_exists is None:
-        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+        return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
 
     return MemberListResponse(
         items=[
@@ -73,7 +73,7 @@ def create_member(
         select(groups.c.id).where(groups.c.id == group_id)
     ).scalar_one_or_none()
     if group_exists is None:
-        return error_response(404, "GROUP_NOT_FOUND", "Group not found.")
+        return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
 
     member_id = uuid4().hex
 

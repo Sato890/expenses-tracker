@@ -127,7 +127,7 @@ class Group:
 
     def _apply_expense_change(self, expense: Expense, reverse: bool = False) -> None:
         for member, change in calculate_expense_balance_changes(expense).items():
-            member.adjust_settlement_balance(-change if reverse else change)
+            member.update_settlement_balance(-change if reverse else change)
 
     def _find_expense_index(self, expense_id: str) -> int:
         for index, transaction in enumerate(self._transactions):
@@ -172,8 +172,8 @@ class Group:
         if settlement.payer is settlement.receiver:
             return
         payer_change = -settlement.amount if reverse else settlement.amount
-        settlement.payer.adjust_settlement_balance(payer_change)
-        settlement.receiver.adjust_settlement_balance(-payer_change)
+        settlement.payer.update_settlement_balance(payer_change)
+        settlement.receiver.update_settlement_balance(-payer_change)
 
     def _validate_settlement(self, settlement: Settlement) -> None:
         if not self._has_member(settlement.payer):
