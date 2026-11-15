@@ -21,7 +21,11 @@ from app.domain.group import Group
 from app.domain.identity import Member
 from app.domain.money import Money
 from app.domain.transaction import Category, Expense
-from app.services import GroupTransactionLimitReachedError, create_equal_expense
+from app.services import (
+    GroupTransactionLimitReachedError,
+    create_equal_expense,
+    get_group_settlement_amounts,
+)
 
 
 @pytest.fixture
@@ -31,7 +35,11 @@ def almost_full_group(schema_engine: Engine, request: pytest.FixtureRequest) -> 
     with Session(schema_engine) as session:
         session.add_all(
             [
-                Group("household", "Household", _members=[Member("alex", "Alex")]),
+                Group(
+                    "household",
+                    "Household",
+                    _members=[Member("alex", "Alex"), Member("bea", "Bea")],
+                ),
                 Group("other", "Other", _members=[Member("alex", "Alex")]),
                 category,
             ]
@@ -59,7 +67,10 @@ def almost_full_group(schema_engine: Engine, request: pytest.FixtureRequest) -> 
 
 
 def record_expense(
-    session: Session, category_id: UUID, group_id: str = "household"
+    session: Session,
+    category_id: UUID,
+    group_id: str = "household",
+    receiver_id: str = "alex",
 ) -> str:
     return create_equal_expense(
         group_id,
@@ -67,7 +78,7 @@ def record_expense(
         "alex",
         date(2026, 11, 1),
         category_id,
-        ["alex"],
+        [receiver_id],
         SqlAlchemyGroupRepository(session),
         SqlAlchemyCategoryRepository(session),
         session,
@@ -155,13 +166,13 @@ def test_competing_creations_wait_and_recheck_capacity_after_commit_or_rollback(
     def first_request() -> str:
         with Session(schema_engine) as session:
             event.listen(session, "before_commit", pause_before_commit)
-            return record_expense(session, almost_full_group)
+            return record_expense(session, almost_full_group, receiver_id="bea")
 
     def second_request() -> str:
         with Session(schema_engine) as session:
             session.execute(text("SET LOCAL lock_timeout = '10s'"))
             second_pid.put(session.scalar(select(func.pg_backend_pid())))
-            return record_expense(session, almost_full_group)
+            return record_expense(session, almost_full_group, receiver_id="bea")
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         first = pool.submit(first_request)
@@ -217,3 +228,10 @@ def test_competing_creations_wait_and_recheck_capacity_after_commit_or_rollback(
             )
             == 2
         )
+        amounts = get_group_settlement_amounts(
+            "household", SqlAlchemyGroupRepository(session)
+        )
+        assert {member.id: amount.amount for member, amount in amounts.items()} == {
+            "alex": Decimal("1"),
+            "bea": Decimal("-1"),
+        }

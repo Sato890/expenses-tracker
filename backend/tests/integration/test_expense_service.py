@@ -172,6 +172,12 @@ def test_settlement_amounts_use_complete_persisted_group_history(
             "bea": Money(Decimal("-53.053"), "EUR"),
             "cam": Money(Decimal("0"), "EUR"),
         }
+        reloaded_group = groups.get("household")
+        assert reloaded_group is not None
+        assert {member.id: amount for member, amount in amounts.items()} == {
+            member.id: amount
+            for member, amount in reloaded_group.calculate_member_settlement_amounts().items()
+        }
         assert {
             member.id: amount
             for member, amount in get_group_settlement_amounts("other", groups).items()
@@ -182,6 +188,72 @@ def test_settlement_amounts_use_complete_persisted_group_history(
         assert get_group_settlement_amounts("empty", groups) == {}
         with pytest.raises(GroupNotFoundError):
             get_group_settlement_amounts("missing", groups)
+
+
+def test_settlement_amount_read_does_not_hydrate_expense_history(
+    schema_engine: Engine,
+) -> None:
+    category = Category("Groceries")
+    category_id = category.id
+    with Session(schema_engine) as session:
+        session.add_all(
+            [
+                Group(
+                    "household",
+                    "Household",
+                    _members=[Member("alex", "Alex"), Member("bea", "Bea")],
+                ),
+                category,
+            ]
+        )
+        session.commit()
+
+    with schema_engine.begin() as connection:
+        connection.execute(
+            text("""
+                INSERT INTO expenses (group_id, id, amount, currency, payer_id, date, category_id)
+                SELECT 'household', 'seed-' || n, 10.005, 'EUR', 'alex',
+                       DATE '2026-11-01', :category_id
+                FROM generate_series(1, 1800) AS n
+            """),
+            {"category_id": category_id},
+        )
+        connection.execute(
+            text("""
+                INSERT INTO allocations (group_id, expense_id, receiver_id, amount, currency)
+                SELECT group_id, id, 'bea', amount, 'EUR' FROM expenses
+            """)
+        )
+        connection.execute(
+            text("""
+                UPDATE members
+                SET settlement_balance = CASE id
+                    WHEN 'alex' THEN 18009.000
+                    WHEN 'bea' THEN -18009.000
+                END
+                WHERE group_id = 'household'
+            """)
+        )
+
+    loaded_expenses: list[Expense] = []
+
+    def record_load(expense: Expense, _context: object) -> None:
+        loaded_expenses.append(expense)
+
+    event.listen(Expense, "load", record_load)
+    try:
+        with Session(schema_engine) as session:
+            amounts = get_group_settlement_amounts(
+                "household", SqlAlchemyGroupRepository(session)
+            )
+    finally:
+        event.remove(Expense, "load", record_load)
+
+    assert loaded_expenses == []
+    assert {member.id: amount.amount for member, amount in amounts.items()} == {
+        "alex": Decimal("18009.000"),
+        "bea": Decimal("-18009.000"),
+    }
 
 
 def test_rolls_back_partial_expense_writes_and_keeps_the_session_usable(
@@ -249,6 +321,13 @@ def test_rolls_back_partial_expense_writes_and_keeps_the_session_usable(
         with Session(schema_engine) as fresh_session:
             assert fresh_session.execute(expense_rows).all() == original_expenses
             assert fresh_session.execute(allocation_rows).all() == original_allocations
+            amounts = get_group_settlement_amounts(
+                "household", SqlAlchemyGroupRepository(fresh_session)
+            )
+            assert {member.id: amount.amount for member, amount in amounts.items()} == {
+                "alex": Decimal("5.0025"),
+                "bea": Decimal("-5.0025"),
+            }
 
         recovered_id = record_expense(session, "4.002").expense_id
 

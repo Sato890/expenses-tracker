@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.adapters.orm import expenses, groups, members
 from app.domain.group import Group
 from app.domain.identity import Member
+from app.domain.money import Money
+from app.domain.settlement_amounts import calculate_expense_balance_changes
 from app.domain.transaction import Category, Expense
 
 
@@ -21,6 +23,12 @@ class AbstractGroupRepository(ABC):
 
     @abstractmethod
     def get(self, group_id: str) -> Group | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_member_settlement_amounts(
+        self, group_id: str
+    ) -> dict[Member, Money] | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -58,6 +66,21 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
     def get(self, group_id: str) -> Group | None:
         return self.session.get(Group, group_id)
 
+    def get_member_settlement_amounts(
+        self, group_id: str
+    ) -> dict[Member, Money] | None:
+        if not self.exists(group_id):
+            return None
+
+        group_members = tuple(
+            self.session.scalars(
+                select(Member)
+                .where(members.c.group_id == group_id)
+                .order_by(members.c.id)
+            )
+        )
+        return {member: member.get_settlement_balance() for member in group_members}
+
     def get_members_for_expense_creation(self, group_id: str) -> tuple[Member, ...]:
         return tuple(
             self.session.scalars(
@@ -68,6 +91,8 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
         )
 
     def add_expense(self, group_id: str, expense: Expense) -> None:
+        for member, change in calculate_expense_balance_changes(expense).items():
+            member.adjust_settlement_balance(change)
         expense._group_id = group_id
         self.session.add(expense)
 

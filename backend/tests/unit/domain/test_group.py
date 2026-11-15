@@ -72,6 +72,53 @@ def test_calculates_settlement_amounts_for_every_member() -> None:
         member_d: Money(Decimal("0"), "EUR"),
     }
     assert sum(amount.amount for amount in settlement_amounts.values()) == Decimal("0")
+    assert {
+        member: member.get_settlement_balance() for member in group.members
+    } == settlement_amounts
+
+
+def test_saved_member_amounts_follow_edits_removals_and_settlements() -> None:
+    alex = Member("alex", "Alex")
+    bea = Member("bea", "Bea")
+    group = Group("group", "Group", _members=[alex, bea])
+    group.add_expense(create_expense(alex, bea, "10.005"))
+    assert (
+        alex.get_settlement_balance().amount,
+        bea.get_settlement_balance().amount,
+    ) == (
+        Decimal("10.005"),
+        Decimal("-10.005"),
+    )
+
+    group.edit_expense(create_expense(bea, alex, "4.002"))
+    assert {member: member.get_settlement_balance() for member in group.members} == (
+        group.calculate_member_settlement_amounts()
+    )
+    assert (
+        alex.get_settlement_balance().amount,
+        bea.get_settlement_balance().amount,
+    ) == (
+        Decimal("-4.002"),
+        Decimal("4.002"),
+    )
+
+    group.remove_expense("expense")
+    group.add_settlement(create_settlement(bea, alex, "2"))
+    assert (
+        alex.get_settlement_balance().amount,
+        bea.get_settlement_balance().amount,
+    ) == (
+        Decimal("-2"),
+        Decimal("2"),
+    )
+    group.remove_settlement("settlement")
+    assert (
+        alex.get_settlement_balance().amount,
+        bea.get_settlement_balance().amount,
+    ) == (
+        Decimal("0"),
+        Decimal("0"),
+    )
 
 
 def test_adds_valid_expense() -> None:

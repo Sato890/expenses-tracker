@@ -9,6 +9,7 @@ from .debt import Debt, calculate_debts
 from .debt_simplification import simplify_debts
 from .identity import Member, User
 from .money import Money
+from .settlement_amounts import calculate_expense_balance_changes
 from .transaction import Expense, Settlement, Transaction
 
 
@@ -107,16 +108,26 @@ class Group:
         ):
             raise ValueError("Expense ID already exists in the group")
 
+        self._apply_expense_change(expense)
         self._transactions.append(expense)
 
     def remove_expense(self, expense_id: str) -> None:
         expense_index = self._find_expense_index(expense_id)
+        original = self._transactions[expense_index]
+        self._apply_expense_change(original, reverse=True)
         del self._transactions[expense_index]
 
     def edit_expense(self, expense: Expense) -> None:
         validate_expense_for_members(expense, self._members)
         expense_index = self._find_expense_index(expense.expense_id)
+        original = self._transactions[expense_index]
+        self._apply_expense_change(original, reverse=True)
+        self._apply_expense_change(expense)
         self._transactions[expense_index] = expense
+
+    def _apply_expense_change(self, expense: Expense, reverse: bool = False) -> None:
+        for member, change in calculate_expense_balance_changes(expense).items():
+            member.adjust_settlement_balance(-change if reverse else change)
 
     def _find_expense_index(self, expense_id: str) -> int:
         for index, transaction in enumerate(self._transactions):
@@ -138,16 +149,31 @@ class Group:
         ):
             raise ValueError("Settlement ID already exists in the group")
 
+        self._apply_settlement_change(settlement)
         self._transactions.append(settlement)
 
     def remove_settlement(self, settlement_id: str) -> None:
         settlement_index = self._find_settlement_index(settlement_id)
+        original = self._transactions[settlement_index]
+        self._apply_settlement_change(original, reverse=True)
         del self._transactions[settlement_index]
 
     def edit_settlement(self, settlement: Settlement) -> None:
         self._validate_settlement(settlement)
         settlement_index = self._find_settlement_index(settlement.settlement_id)
+        original = self._transactions[settlement_index]
+        self._apply_settlement_change(original, reverse=True)
+        self._apply_settlement_change(settlement)
         self._transactions[settlement_index] = settlement
+
+    def _apply_settlement_change(
+        self, settlement: Settlement, reverse: bool = False
+    ) -> None:
+        if settlement.payer is settlement.receiver:
+            return
+        payer_change = -settlement.amount if reverse else settlement.amount
+        settlement.payer.adjust_settlement_balance(payer_change)
+        settlement.receiver.adjust_settlement_balance(-payer_change)
 
     def _validate_settlement(self, settlement: Settlement) -> None:
         if not self._has_member(settlement.payer):

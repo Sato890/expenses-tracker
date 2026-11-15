@@ -46,7 +46,12 @@ members = Table(
     ),
     Column("id", String, nullable=False),
     Column("name", String, nullable=False),
+    Column("settlement_balance", Numeric, nullable=False, server_default="0"),
     PrimaryKeyConstraint("group_id", "id", name="pk_members"),
+    CheckConstraint(
+        "settlement_balance = trunc(settlement_balance, 18)",
+        name="ck_members_settlement_balance_precision",
+    ),
 )
 
 categories = Table(
@@ -138,6 +143,7 @@ def start_mappers() -> None:
             "_id": members.c.id,
             "_name": members.c.name,
             "_group_id": members.c.group_id,
+            "_settlement_balance_value": members.c.settlement_balance,
         },
     )
     mapper_registry.map_imperatively(

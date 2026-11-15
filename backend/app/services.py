@@ -57,10 +57,10 @@ def ensure_group_transaction_capacity(
 def get_group_settlement_amounts(
     group_id: str, groups: AbstractGroupRepository
 ) -> dict[Member, Money]:
-    group = groups.get(group_id)
-    if group is None:
+    amounts = groups.get_member_settlement_amounts(group_id)
+    if amounts is None:
         raise GroupNotFoundError(group_id)
-    return group.calculate_member_settlement_amounts()
+    return amounts
 
 
 def list_group_expenses(

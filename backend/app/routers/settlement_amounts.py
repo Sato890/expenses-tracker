@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.adapters.repository import SqlAlchemyGroupRepository
 from app.api_errors import error_response
 from app.database import get_session
+from app.domain.money import Money
 from app.services import GroupNotFoundError, get_group_settlement_amounts
 
 router = APIRouter()
@@ -22,6 +23,12 @@ class SettlementAmountsResponse(BaseModel):
     group_id: str
     currency: str
     items: list[MemberSettlementAmount]
+
+
+def format_settlement_amount(amount: Money) -> str:
+    if amount.amount == 0:
+        return "0"
+    return format(amount.amount, "f")
 
 
 @router.get(
@@ -41,7 +48,10 @@ def read_settlement_amounts(
         group_id=group_id,
         currency="EUR",
         items=[
-            MemberSettlementAmount(member_id=member.id, amount=str(amount.amount))
+            MemberSettlementAmount(
+                member_id=member.id,
+                amount=format_settlement_amount(amount),
+            )
             for member, amount in sorted(amounts.items(), key=lambda item: item[0].id)
         ],
     )
