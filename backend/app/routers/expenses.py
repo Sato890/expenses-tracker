@@ -15,9 +15,13 @@ from app.adapters.repository import (
     SqlAlchemyGroupRepository,
 )
 from app.api_errors import build_error_response
+from app.api_mapping import build_expense_response
+from app.api_responses import (
+    ExpenseHistoryResponse,
+    ExpenseResponse,
+)
 from app.database import get_session
 from app.domain.money import Money
-from app.domain.transaction import Expense
 from app.services import (
     GroupNotFoundError,
     GroupTransactionLimitReachedError,
@@ -64,49 +68,6 @@ class CreateExpenseRequest(BaseModel):
         ):
             raise ValueError("The date must use YYYY-MM-DD")
         return value
-
-
-class AllocationResponse(BaseModel):
-    receiver_id: str
-    amount: str
-
-
-class ExpenseResponse(BaseModel):
-    id: str
-    group_id: str
-    type: Literal["expense"]
-    amount: str
-    currency: str
-    payer_id: str
-    date: date
-    category_id: UUID
-    allocations: list[AllocationResponse]
-
-
-class ExpenseHistoryResponse(BaseModel):
-    items: list[ExpenseResponse]
-    limit: int
-    offset: int
-
-
-def build_expense_response(group_id: str, expense: Expense) -> ExpenseResponse:
-    return ExpenseResponse(
-        id=expense.expense_id,
-        group_id=group_id,
-        type="expense",
-        amount=str(expense.amount.amount),
-        currency=expense.amount.currency,
-        payer_id=expense.payer.id,
-        date=expense.date,
-        category_id=expense.category.id,
-        allocations=[
-            AllocationResponse(
-                receiver_id=allocation.receiver.id,
-                amount=str(allocation.share.amount),
-            )
-            for allocation in expense.allocations
-        ],
-    )
 
 
 @router.get("/groups/{group_id}/transactions", response_model=ExpenseHistoryResponse)

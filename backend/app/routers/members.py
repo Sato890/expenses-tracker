@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.adapters.orm import groups, members
 from app.adapters.repository import SqlAlchemyGroupRepository
 from app.api_errors import build_error_response
+from app.api_responses import MemberListResponse, MemberResponse
 from app.database import get_session
 
 router = APIRouter()
@@ -26,15 +27,6 @@ class CreateMember(BaseModel):
         if "\x00" in value:
             raise ValueError("Names must not contain NUL characters")
         return value
-
-
-class MemberResponse(BaseModel):
-    id: str
-    display_name: str
-
-
-class MemberListResponse(BaseModel):
-    items: list[MemberResponse]
 
 
 @router.get("/groups/{group_id}/members", response_model=MemberListResponse)

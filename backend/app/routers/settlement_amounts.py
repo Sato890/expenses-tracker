@@ -2,33 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.adapters.repository import SqlAlchemyGroupRepository
 from app.api_errors import build_error_response
+from app.api_mapping import format_settlement_amount
+from app.api_responses import MemberSettlementAmount, SettlementAmountsResponse
 from app.database import get_session
-from app.domain.money import Money
 from app.services import GroupNotFoundError, get_group_settlement_amounts
 
 router = APIRouter()
-
-
-class MemberSettlementAmount(BaseModel):
-    member_id: str
-    amount: str
-
-
-class SettlementAmountsResponse(BaseModel):
-    group_id: str
-    currency: str
-    items: list[MemberSettlementAmount]
-
-
-def format_settlement_amount(amount: Money) -> str:
-    if amount.amount == 0:
-        return "0"
-    return format(amount.amount, "f")
 
 
 @router.get(
