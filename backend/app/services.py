@@ -123,6 +123,7 @@ def create_equal_expense(
         )
         validate_expense_for_members(expense, group_members)
         groups.add_expense(group_id, expense)
+        groups.record_change(group_id, "expense", expense.expense_id)
         session.commit()
         return expense
     except Exception:

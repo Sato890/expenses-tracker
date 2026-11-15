@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.adapters.orm import expenses, groups, members
+from app.adapters.orm import expenses, group_changes, groups, members
 from app.domain.group import Group
 from app.domain.identity import Member
 from app.domain.money import Money
@@ -13,6 +13,10 @@ from app.domain.transaction import Category, Expense
 
 
 class AbstractGroupRepository(ABC):
+    @abstractmethod
+    def record_change(self, group_id: str, entity_type: str, entity_id: str) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def count_transactions_for_update(self, group_id: str) -> int | None:
         raise NotImplementedError
@@ -50,6 +54,24 @@ class SqlAlchemyGroupRepository(AbstractGroupRepository):
 
     def add(self, group: Group) -> None:
         self.session.add(group)
+
+    def record_change(self, group_id: str, entity_type: str, entity_id: str) -> None:
+        revision = self.session.scalar(
+            update(groups)
+            .where(groups.c.id == group_id)
+            .values(revision=groups.c.revision + 1)
+            .returning(groups.c.revision)
+        )
+        if revision is None:
+            raise LookupError(group_id)
+        self.session.execute(
+            group_changes.insert().values(
+                group_id=group_id,
+                revision=revision,
+                entity_type=entity_type,
+                entity_id=entity_id,
+            )
+        )
 
     def count_transactions_for_update(self, group_id: str) -> int | None:
         group = self.session.scalar(

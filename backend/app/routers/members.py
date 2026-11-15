@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.orm import groups, members
+from app.adapters.repository import SqlAlchemyGroupRepository
 from app.api_errors import build_error_response
 from app.database import get_session
 
@@ -82,5 +83,6 @@ def create_member(
             group_id=group_id, id=member_id, name=member.display_name
         )
     )
+    SqlAlchemyGroupRepository(session).record_change(group_id, "member", member_id)
     session.commit()
     return MemberResponse(id=member_id, display_name=member.display_name)

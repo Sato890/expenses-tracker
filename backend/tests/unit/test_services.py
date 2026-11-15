@@ -22,6 +22,10 @@ class FakeGroups:
     def __init__(self, group: Group | None) -> None:
         self.group = group
         self.saved_expenses: list[tuple[str, Expense]] = []
+        self.changes: list[tuple[str, str, str]] = []
+
+    def record_change(self, group_id: str, entity_type: str, entity_id: str) -> None:
+        self.changes.append((group_id, entity_type, entity_id))
 
     def get(self, group_id: str) -> Group | None:
         return (
