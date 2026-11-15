@@ -5,7 +5,7 @@ import pytest
 
 from app.domain.allocation import Allocation, allocate_equally
 from app.domain.debt import Debt
-from app.domain.group import Group
+from app.domain.group import Group, validate_expense_for_members
 from app.domain.identity import Member, User
 from app.domain.money import Money
 from app.domain.transaction import Category, Expense, Settlement
@@ -83,6 +83,26 @@ def test_adds_valid_expense() -> None:
     group.add_expense(expense)
 
     assert group.transactions == (expense,)
+
+
+def test_validates_new_expense_with_only_current_members() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+
+    validate_expense_for_members(
+        create_expense(payer, receiver, "5"), (payer, receiver)
+    )
+
+
+def test_rejects_other_group_member_with_the_same_id_without_history() -> None:
+    payer = Member("A", "A")
+    receiver = Member("B", "B")
+
+    with pytest.raises(ValueError, match="Receiver is not in the group"):
+        validate_expense_for_members(
+            create_expense(payer, Member("B", "Other Bea"), "5"),
+            (payer, receiver),
+        )
 
 
 def test_rejects_expense_from_non_member_payer() -> None:

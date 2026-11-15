@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import Connection, Engine, event, select
+from sqlalchemy import Connection, Engine, event, func, select, text
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Executable
 from sqlalchemy.sql.dml import Insert
@@ -67,6 +67,65 @@ def test_equal_expense_survives_a_fresh_session(schema_engine: Engine) -> None:
             ("alex", Decimal("5.0025")),
             ("bea", Decimal("5.0025")),
         ]
+
+
+def test_equal_creation_does_not_load_historical_expenses(
+    schema_engine: Engine,
+) -> None:
+    category = Category("Groceries")
+    category_id = category.id
+    with Session(schema_engine) as session:
+        session.add_all(
+            [
+                Group("household", "Household", _members=[Member("alex", "Alex")]),
+                category,
+            ]
+        )
+        session.commit()
+
+    with schema_engine.begin() as connection:
+        connection.execute(
+            text("""
+                INSERT INTO expenses (group_id, id, amount, currency, payer_id, date, category_id)
+                SELECT 'household', 'seed-' || n, 10.005, 'EUR', 'alex',
+                       DATE '2026-11-01', :category_id
+                FROM generate_series(1, 1800) AS n
+            """),
+            {"category_id": category_id},
+        )
+        connection.execute(
+            text("""
+                INSERT INTO allocations (group_id, expense_id, receiver_id, amount, currency)
+                SELECT group_id, id, 'alex', 10.005, 'EUR' FROM expenses
+            """)
+        )
+
+    loaded_expenses: list[Expense] = []
+
+    def record_load(expense: Expense, _context: object) -> None:
+        loaded_expenses.append(expense)
+
+    event.listen(Expense, "load", record_load)
+    try:
+        with Session(schema_engine) as session:
+            create_equal_expense(
+                "household",
+                Money(Decimal("10.005"), "EUR"),
+                "alex",
+                date(2026, 11, 15),
+                category_id,
+                ["alex"],
+                SqlAlchemyGroupRepository(session),
+                SqlAlchemyCategoryRepository(session),
+                session,
+            )
+    finally:
+        event.remove(Expense, "load", record_load)
+
+    assert loaded_expenses == []
+    with Session(schema_engine) as session:
+        assert session.scalar(select(func.count()).select_from(expenses)) == 1801
+        assert session.scalar(select(func.count()).select_from(allocations)) == 1801
 
 
 def test_settlement_amounts_use_complete_persisted_group_history(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -9,6 +10,17 @@ from .debt_simplification import simplify_debts
 from .identity import Member, User
 from .money import Money
 from .transaction import Expense, Settlement, Transaction
+
+
+def validate_expense_for_members(expense: Expense, members: Sequence[Member]) -> None:
+    if not any(member is expense.payer for member in members):
+        raise ValueError("Payer is not in the group")
+
+    for allocation in expense.allocations:
+        if not any(member is allocation.receiver for member in members):
+            raise ValueError("Receiver is not in the group")
+
+    validate_exact_allocations(expense.amount, expense.allocations)
 
 
 @dataclass
@@ -86,7 +98,7 @@ class Group:
         return simplify_debts(self.calculate_member_settlement_amounts())
 
     def add_expense(self, expense: Expense) -> None:
-        self._validate_expense(expense)
+        validate_expense_for_members(expense, self._members)
 
         if any(
             isinstance(transaction, Expense)
@@ -102,19 +114,9 @@ class Group:
         del self._transactions[expense_index]
 
     def edit_expense(self, expense: Expense) -> None:
-        self._validate_expense(expense)
+        validate_expense_for_members(expense, self._members)
         expense_index = self._find_expense_index(expense.expense_id)
         self._transactions[expense_index] = expense
-
-    def _validate_expense(self, expense: Expense) -> None:
-        if not self._has_member(expense.payer):
-            raise ValueError("Payer is not in the group")
-
-        for allocation in expense.allocations:
-            if not self._has_member(allocation.receiver):
-                raise ValueError("Receiver is not in the group")
-
-        validate_exact_allocations(expense.amount, expense.allocations)
 
     def _find_expense_index(self, expense_id: str) -> int:
         for index, transaction in enumerate(self._transactions):
