@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.allocation import Allocation
 from app.domain.group import Group
 from app.domain.identity import Member
 from app.domain.money import Money
@@ -20,6 +21,7 @@ from app.services import (
 class FakeGroups:
     def __init__(self, group: Group | None) -> None:
         self.group = group
+        self.saved_expenses: list[tuple[str, Expense]] = []
 
     def get(self, group_id: str) -> Group | None:
         return (
@@ -28,16 +30,18 @@ class FakeGroups:
 
     def count_transactions_for_update(self, group_id: str) -> int | None:
         group = self.get(group_id)
-        return len(group.transactions) if group is not None else None
+        if group is None:
+            return None
+        return len(group.transactions) + sum(
+            saved_group_id == group_id for saved_group_id, _ in self.saved_expenses
+        )
 
     def get_members_for_expense_creation(self, group_id: str) -> tuple[Member, ...]:
         group = self.get(group_id)
         return group.members if group is not None else ()
 
     def add_expense(self, group_id: str, expense: Expense) -> None:
-        group = self.get(group_id)
-        assert group is not None
-        group.add_expense(expense)
+        self.saved_expenses.append((group_id, expense))
 
 
 class FakeCategories:
@@ -77,6 +81,7 @@ def test_create_equal_expense_saves_selected_members_and_commits_once() -> None:
     )
     category = Category("Groceries")
     session = FakeSession()
+    groups = FakeGroups(group)
 
     expense = create_equal_expense(
         "household",
@@ -85,13 +90,13 @@ def test_create_equal_expense_saves_selected_members_and_commits_once() -> None:
         date(2026, 10, 31),
         category.id,
         ["bea", "alex", "cam"],
-        FakeGroups(group),
+        groups,
         FakeCategories(category),
         session,
     )
 
     assert expense.expense_id
-    assert group.transactions == (expense,)
+    assert groups.saved_expenses == [(group.id, expense)]
     assert expense.payer is group.members[0]
     assert expense.category is category
     assert [(item.receiver.id, item.share.amount) for item in expense.allocations] == [
@@ -126,6 +131,7 @@ def test_create_equal_expense_rejects_invalid_context_without_committing(
     category = Category("Groceries")
     session = FakeSession()
 
+    groups = FakeGroups(group if group_exists else None)
     with pytest.raises(error):
         create_equal_expense(
             "household",
@@ -134,12 +140,12 @@ def test_create_equal_expense_rejects_invalid_context_without_committing(
             date(2026, 10, 31),
             category.id if category_exists else uuid4(),
             receiver_ids,
-            FakeGroups(group if group_exists else None),
+            groups,
             FakeCategories(category),
             session,
         )
 
-    assert group.transactions == ()
+    assert groups.saved_expenses == []
     assert (session.commits, session.rollbacks) == (0, 1)
 
 
@@ -148,6 +154,7 @@ def test_rejects_equal_expense_below_one_allocation_unit_per_receiver() -> None:
     group = Group("household", "Household", _members=members)
     category = Category("Groceries")
     session = FakeSession()
+    groups = FakeGroups(group)
 
     with pytest.raises(
         InvalidExpenseRequestError,
@@ -160,12 +167,41 @@ def test_rejects_equal_expense_below_one_allocation_unit_per_receiver() -> None:
             date(2026, 10, 31),
             category.id,
             [member.id for member in members],
-            FakeGroups(group),
+            groups,
             FakeCategories(category),
             session,
         )
 
-    assert group.transactions == ()
+    assert groups.saved_expenses == []
+    assert (session.commits, session.rollbacks) == (0, 1)
+
+
+def test_rejects_invalid_calculated_shares_before_saving(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    alex = Member("alex", "Alex")
+    groups = FakeGroups(Group("household", "Household", _members=[alex]))
+    category = Category("Groceries")
+    session = FakeSession()
+    monkeypatch.setattr(
+        "app.services.allocate_equally",
+        lambda amount, receivers: (Allocation(alex, Money(Decimal("9"), "EUR")),),
+    )
+
+    with pytest.raises(ValueError, match="The allocations must add up to the total"):
+        create_equal_expense(
+            "household",
+            Money(Decimal("10"), "EUR"),
+            "alex",
+            date(2026, 10, 31),
+            category.id,
+            ["alex"],
+            groups,
+            FakeCategories(category),
+            session,
+        )
+
+    assert groups.saved_expenses == []
     assert (session.commits, session.rollbacks) == (0, 1)
 
 

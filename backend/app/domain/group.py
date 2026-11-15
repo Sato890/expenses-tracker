@@ -98,7 +98,7 @@ class Group:
         return simplify_debts(self.calculate_member_settlement_amounts())
 
     def add_expense(self, expense: Expense) -> None:
-        self._validate_expense(expense)
+        validate_expense_for_members(expense, self._members)
 
         if any(
             isinstance(transaction, Expense)
@@ -114,12 +114,9 @@ class Group:
         del self._transactions[expense_index]
 
     def edit_expense(self, expense: Expense) -> None:
-        self._validate_expense(expense)
+        validate_expense_for_members(expense, self._members)
         expense_index = self._find_expense_index(expense.expense_id)
         self._transactions[expense_index] = expense
-
-    def _validate_expense(self, expense: Expense) -> None:
-        validate_expense_for_members(expense, self._members)
 
     def _find_expense_index(self, expense_id: str) -> int:
         for index, transaction in enumerate(self._transactions):
