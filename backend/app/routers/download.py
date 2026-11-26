@@ -38,13 +38,13 @@ def download_group(
         session.execute(
             text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         )
-        row = session.execute(
-            select(groups.c.id, groups.c.revision).where(groups.c.id == group_id)
-        ).one_or_none()
-        if row is None:
+        revision = session.scalar(
+            select(groups.c.revision).where(groups.c.id == group_id)
+        )
+        if revision is None:
             return build_error_response(404, "GROUP_NOT_FOUND", "Group not found.")
 
-        token = _sync_token(group_id, row.revision)
+        token = _sync_token(group_id, revision)
         etag = f'"{token}"'
         if _matches_etag(request.headers.get("if-none-match"), etag):
             return Response(status_code=304, headers={"ETag": etag})
