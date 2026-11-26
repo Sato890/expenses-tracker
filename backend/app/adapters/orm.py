@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     Column,
     Date,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     and_,
     event,
     inspect,
+    text,
 )
 from sqlalchemy.orm import composite, foreign, registry, relationship
 
@@ -30,7 +32,20 @@ groups = Table(
     metadata,
     Column("id", String, nullable=False),
     Column("name", String, nullable=False),
+    Column("revision", BigInteger, nullable=False, server_default=text("0")),
     PrimaryKeyConstraint("id", name="pk_groups"),
+)
+
+group_changes = Table(
+    "group_changes",
+    metadata,
+    Column("group_id", String, ForeignKey("groups.id"), nullable=False),
+    Column("revision", BigInteger, nullable=False),
+    Column("entity_type", String, nullable=False),
+    Column("entity_id", String, nullable=False),
+    PrimaryKeyConstraint(
+        "group_id", "revision", "entity_type", "entity_id", name="pk_group_changes"
+    ),
 )
 
 members = Table(

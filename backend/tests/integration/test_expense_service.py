@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import Executable
 from sqlalchemy.sql.dml import Insert
 
-from app.adapters.orm import allocations, expenses
+from app.adapters.orm import allocations, expenses, group_changes, groups
 from app.adapters.repository import (
     SqlAlchemyCategoryRepository,
     SqlAlchemyGroupRepository,
@@ -67,6 +67,14 @@ def test_equal_expense_survives_a_fresh_session(schema_engine: Engine) -> None:
             ("alex", Decimal("5.0025")),
             ("bea", Decimal("5.0025")),
         ]
+        assert session.scalar(select(groups.c.revision)) == 1
+        assert session.execute(
+            select(
+                group_changes.c.revision,
+                group_changes.c.entity_type,
+                group_changes.c.entity_id,
+            )
+        ).one() == (1, "expense", expense_id)
 
 
 def test_equal_creation_does_not_load_historical_expenses(
@@ -340,3 +348,7 @@ def test_rolls_back_partial_expense_writes_and_keeps_the_session_usable(
             original_id,
             recovered_id,
         }
+        assert session.scalar(select(groups.c.revision)) == 2
+        assert session.scalars(
+            select(group_changes.c.entity_id).order_by(group_changes.c.revision)
+        ).all() == [original_id, recovered_id]

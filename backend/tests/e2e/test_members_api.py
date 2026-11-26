@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from app.adapters.orm import groups, members
+from app.adapters.orm import group_changes, groups, members
 
 
 def test_lists_group_members(schema_engine: Engine, client: TestClient) -> None:
@@ -74,6 +74,14 @@ def test_creates_member_in_group(schema_engine: Engine, client: TestClient) -> N
             member["id"],
             "Aléx",
         )
+        assert session.scalar(select(groups.c.revision)) == 1
+        assert session.execute(
+            select(
+                group_changes.c.revision,
+                group_changes.c.entity_type,
+                group_changes.c.entity_id,
+            )
+        ).one() == (1, "member", member["id"])
 
 
 @pytest.mark.parametrize("name", ["  ", "bad\x00name"])
